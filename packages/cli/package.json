@@ -1,0 +1,16 @@
+{
+  "name": "@docedit/cli",
+  "version": "0.0.0",
+  "description": "docedit command line: thin wrapper over @docedit/core.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "docedit": "dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@docedit/core": "0.0.0"
+  }
+}

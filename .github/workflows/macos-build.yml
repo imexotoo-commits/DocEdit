@@ -1,0 +1,18 @@
+name: macos-build
+# Universal (Apple Silicon and Intel) test build, ad-hoc signed and not notarized. Releases: release-macos.yml.
+on: [push, pull_request]
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build -w @docedit/core
+      - run: npm run build -w @docedit/desktop
+      - run: npx electron-builder --mac dmg zip --universal -c.mac.identity=-
+        working-directory: apps/desktop
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      - uses: actions/upload-artifact@v4
+        with: { name: oakqueill-macos-test, path: 'apps/desktop/release/*.dmg', if-no-files-found: error }

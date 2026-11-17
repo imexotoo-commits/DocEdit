@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.DS_Store
+out/
+release*/
+apps/ios/Oakqueill/Web/
+apps/ios/build/
+*.xcuserstate
+xcuserdata/

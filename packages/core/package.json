@@ -1,0 +1,36 @@
+{
+  "name": "@docedit/core",
+  "version": "0.0.0",
+  "description": "Headless PDF operations (merge, split, edit, stamp, sign visually, redact, forms). Bytes in, bytes out.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./page-range": {
+      "types": "./dist/pageRange.d.ts",
+      "default": "./dist/pageRange.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cantoo/fontkit": "^2.0.12",
+    "@cantoo/pdf-lib": "^2.11.1",
+    "asn1js": "^4.0.0",
+    "pdfjs-dist": "^4.10.38",
+    "pkijs": "^4.0.1"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas": "^0.1.65"
+  }
+}

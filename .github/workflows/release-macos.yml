@@ -1,0 +1,59 @@
+name: release-macos
+
+# Builds the macOS app (universal: Apple Silicon and Intel), signs it with a Developer ID certificate and has Apple
+# notarize it, so it opens without a Gatekeeper warning. Needs an Apple Developer account. Set up under
+# Settings → Secrets and variables → Actions (see docs/MACOS_RELEASE.md):
+#   MAC_CERT_P12_BASE64   the "Developer ID Application" certificate with its private key, exported as .p12, base64
+#   MAC_CERT_PASSWORD     the password chosen when exporting the .p12
+#   APPLE_ID              the Apple ID email of the developer account
+#   APPLE_APP_SPECIFIC_PASSWORD   an app-specific password for that Apple ID (appleid.apple.com)
+#   APPLE_TEAM_ID         the 10-character team ID
+# Without the secrets the job stops at the first step instead of shipping an unsigned build.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Require the signing secrets
+        env:
+          HAVE: ${{ secrets.MAC_CERT_P12_BASE64 != '' && secrets.MAC_CERT_PASSWORD != '' && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          if [ "$HAVE" != "true" ]; then echo "::error::The macOS signing secrets are not all set; see docs/MACOS_RELEASE.md"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build -w @docedit/core
+      - run: npm run build -w @docedit/desktop
+      - name: Sign, notarize and package
+        working-directory: apps/desktop
+        run: npx electron-builder --mac dmg zip --universal -c.mac.notarize=true --publish never
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Check the result is signed and notarized
+        working-directory: apps/desktop/release
+        run: |
+          APP=$(ls -d mac-universal/*.app)
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl --assess --type execute --verbose=2 "$APP"
+          xcrun stapler validate "$APP"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oakqueill-macos
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+          if-no-files-found: error
