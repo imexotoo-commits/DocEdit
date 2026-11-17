@@ -1,0 +1,16 @@
+export * from './types.js';
+export * from './errors.js';
+export { parsePageRange } from './pageRange.js';
+export { getInfo, setMetadata } from './document.js';
+export { mergePdfs, selectPages, extractPages, reorderPages, deletePages, splitPdf, rotatePages, insertBlankPage, cropPages, arrangePages, type MergeInput, type PageSlot } from './pages.js';
+export { addTextWatermark, addPageNumbers, placeImage, type WatermarkOptions, type PageNumberOptions, type ImageBytes } from './stamp.js';
+export { addVisualSignature, type VisualSignature } from './sign.js';
+export { signPdf, verifySignatures, createCmsSigner, type Signer, type CryptoSignOptions, type SignatureReport, type CertificateInfo, type VerifyOptions } from './signature.js';
+export { listFormFields, fillFormFields, flattenForm, type FieldInfo, type FieldKind } from './forms.js';
+export { extractText, findText, type TextMatch, type FindOptions, type TextOptions } from './text.js';
+export { findRedactionMarks, applyRedactions, verifyRedaction, pruneUnreachable, checkRedactionCoverage, type RedactionMark, type RedactOptions, type CoverageProblem } from './redact.js';
+export { createBlankPdf, imagesToPdf, textToPdf, detectImage, jpegOrientation, PAPER, UnsupportedImageError, type ImagesToPdfOptions, type TextToPdfOptions, type TextToPdfResult } from './create.js';
+export type { Rasterizer, RasterPage } from './render.js';
+export { applyEdits, displayFrame, formatBates, wrapText, type DocEdit, type AnnotationSpec, type MarkSpec, type OutlineEntry, type FurnitureText, type Corner, type ApplyEditsOptions } from './edit.js';
+export { inspectDocument, sanitizeDocument, countRevisions, type HiddenCategory, type InspectionItem } from './sanitize.js';
+export { isEncrypted, decryptPdf, protectPdf, type ProtectOptions, type Permissions } from './security.js';

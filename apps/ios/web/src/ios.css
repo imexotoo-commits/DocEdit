@@ -1,0 +1,28 @@
+/* Touch and safe-area adjustments on top of the desktop styles. */
+html.ios, html.ios body { height: 100%; overscroll-behavior: none; -webkit-text-size-adjust: 100%; -webkit-touch-callout: none; }
+html.ios body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); box-sizing: border-box; }
+html.ios button, html.ios [role="button"], html.ios .tool-btn, html.ios select { min-height: 44px; min-width: 44px; }
+/* 16px stops Safari zooming the page when a field is focused */
+html.ios input, html.ios textarea, html.ios select { font-size: 16px; }
+html.ios .tool-btn span { display: none; }
+html.ios .appbar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+html.ios .toolbar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+/* no hover-only affordances on a touch screen */
+@media (hover: none) { html.ios *:hover { transition: none; } }
+
+/* Narrow screens: the desktop layout assumes a wide window. */
+html.ios .empty { padding: 16px; box-sizing: border-box; }
+html.ios .empty-card { padding: 24px 18px; max-width: 100%; box-sizing: border-box; }
+html.ios .empty-card .hint { display: none; } /* there is no drag and drop onto a phone */
+html.ios .empty-new { flex-wrap: wrap; }
+/* these three need a Windows scanner, LibreOffice or a reMarkable folder: not available on iOS */
+html.ios .empty-new button:nth-of-type(n+4) { display: none; }
+html.ios .modal { min-width: 0; max-width: calc(100vw - 24px); box-sizing: border-box; }
+html.ios .split-pane { grid-template-columns: 1fr; }
+html.ios .grid3 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 700px) {
+  html.ios .sidebar, html.ios .sidebar { width: 112px; }
+  html.ios .appbar { padding: 0 6px; gap: 2px; }
+}
+html.ios .sidebar .tabs { overflow-x: auto; flex-wrap: nowrap; }
+html.ios .sidebar .tabs button { flex: none; padding: 0 10px; white-space: nowrap; }

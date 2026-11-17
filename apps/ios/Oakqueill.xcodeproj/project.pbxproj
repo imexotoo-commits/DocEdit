@@ -1,0 +1,252 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000A11CE0000001 /* OakqueillApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000A11CE0000002 /* OakqueillApp.swift */; };
+		000000000000A11CE0000003 /* WebHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000A11CE0000004 /* WebHost.swift */; };
+		000000000000A11CE0000005 /* NativeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000A11CE0000006 /* NativeBridge.swift */; };
+		000000000000A11CE0000007 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000A11CE0000008 /* Assets.xcassets */; };
+		000000000000A11CE0000009 /* Web in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000A11CE000000A /* Web */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000A11CE0000002 /* OakqueillApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OakqueillApp.swift; sourceTree = "<group>"; };
+		000000000000A11CE0000004 /* WebHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebHost.swift; sourceTree = "<group>"; };
+		000000000000A11CE0000006 /* NativeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeBridge.swift; sourceTree = "<group>"; };
+		000000000000A11CE000000B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000A11CE0000008 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		000000000000A11CE000000A /* Web */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Web; sourceTree = "<group>"; };
+		000000000000A11CE000000C /* Oakqueill.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Oakqueill.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000A11CE000000D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000A11CE000000E = {
+			isa = PBXGroup;
+			children = (
+				000000000000A11CE000000F /* Oakqueill */,
+				000000000000A11CE0000010 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000A11CE000000F /* Oakqueill */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000A11CE0000002 /* OakqueillApp.swift */,
+				000000000000A11CE0000004 /* WebHost.swift */,
+				000000000000A11CE0000006 /* NativeBridge.swift */,
+				000000000000A11CE000000B /* Info.plist */,
+				000000000000A11CE0000008 /* Assets.xcassets */,
+				000000000000A11CE000000A /* Web */,
+			);
+			path = Oakqueill;
+			sourceTree = "<group>";
+		};
+		000000000000A11CE0000010 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000A11CE000000C /* Oakqueill.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000A11CE0000011 /* Oakqueill */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000A11CE0000012 /* Build configuration list for PBXNativeTarget "Oakqueill" */;
+			buildPhases = (
+				000000000000A11CE0000013 /* Sources */,
+				000000000000A11CE000000D /* Frameworks */,
+				000000000000A11CE0000014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Oakqueill;
+			productName = Oakqueill;
+			productReference = 000000000000A11CE000000C /* Oakqueill.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000A11CE0000015 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					000000000000A11CE0000011 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 000000000000A11CE0000016 /* Build configuration list for PBXProject "Oakqueill" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000A11CE000000E;
+			productRefGroup = 000000000000A11CE0000010 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000A11CE0000011 /* Oakqueill */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000A11CE0000014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000A11CE0000007 /* Assets.xcassets in Resources */,
+				000000000000A11CE0000009 /* Web in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000A11CE0000013 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000A11CE0000001 /* OakqueillApp.swift in Sources */,
+				000000000000A11CE0000003 /* WebHost.swift in Sources */,
+				000000000000A11CE0000005 /* NativeBridge.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		000000000000A11CE0000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		000000000000A11CE0000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		000000000000A11CE0000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Oakqueill/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.docedit.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		000000000000A11CE000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Oakqueill/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.docedit.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000A11CE0000016 /* Build configuration list for PBXProject "Oakqueill" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000A11CE0000017 /* Debug */,
+				000000000000A11CE0000018 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000A11CE0000012 /* Build configuration list for PBXNativeTarget "Oakqueill" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000A11CE0000019 /* Debug */,
+				000000000000A11CE000001A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000A11CE0000015 /* Project object */;
+}

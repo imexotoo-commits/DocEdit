@@ -1,0 +1,23 @@
+{
+  "name": "@docedit/ios-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web layer of the Oakqueill iOS app: the desktop renderer plus a window.docedit bridge that runs the core in a worker and talks to Swift for files, printing and links.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@docedit/core": "0.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "dejavu-fonts-ttf": "^2.37.3",
+    "pdfjs-dist": "^4.10.38",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "vite": "^8.0.0"
+  }
+}

@@ -1,0 +1,17 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm run ios:web
+      - name: Build for the iOS Simulator (no code signing)
+        run: |
+          xcodebuild -project apps/ios/Oakqueill.xcodeproj -scheme Oakqueill -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath apps/ios/build CODE_SIGNING_ALLOWED=NO build

@@ -1,0 +1,33 @@
+{
+  "name": "docedit",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Oakqueill PDF Editor for iPhone and iPad: core, the shared renderer and a SwiftUI shell.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "apps/ios/web"
+  ],
+  "scripts": {
+    "typecheck": "npm run build -w @docedit/core && tsc -p apps/ios/web/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test",
+    "build:ios-web": "npm run build -w @docedit/core && npm run build -w @docedit/ios-web",
+    "ios:web": "npm run build:ios-web",
+    "ios:sim": "npm run build:ios-web && xcodebuild -project apps/ios/Oakqueill.xcodeproj -scheme Oakqueill -configuration Debug -sdk iphonesimulator -derivedDataPath apps/ios/build CODE_SIGNING_ALLOWED=NO build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "dejavu-fonts-ttf": "^2.37.3",
+    "typescript": "^5.6.0",
+    "vite": "^7.0.0",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
