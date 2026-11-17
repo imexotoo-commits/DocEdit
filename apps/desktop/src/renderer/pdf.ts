@@ -1,0 +1,73 @@
+/** pdf.js setup for the renderer: loading documents safely and reading what the editor needs up front. */
+import * as pdfjs from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+export type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
+export { pdfjs };
+
+/** Size of a page at scale 1 with its own /Rotate applied, plus that rotation. */
+export interface PageGeometry {
+  width: number; height: number; rotate: number;
+  /** visible box in user space [x0, y0, x1, y1] (crop box), as pdf.js page.view */
+  view: number[];
+}
+
+export interface LoadedSource {
+  doc: PDFDocumentProxy;
+  pages: PageGeometry[];
+  /** page labels from the file (e.g. "iii", "A-1"), or null when the file defines none */
+  labels: string[] | null;
+  /** Things that a page-level save does not carry over yet, so the user can be told before saving. */
+  notes: { outline: boolean; formFields: boolean; signatures: boolean };
+}
+
+export class PdfOpenError extends Error {
+  constructor(message: string, readonly needsPassword = false) { super(message); }
+}
+
+/** `password`: for a protected file viewed without decrypting it first (the browser viewer). */
+export async function loadSource(bytes: Uint8Array, name: string, password?: string): Promise<LoadedSource> {
+  let doc: PDFDocumentProxy;
+  try {
+    doc = await pdfjs.getDocument({
+      data: bytes.slice(), // pdf.js takes ownership of (detaches) the buffer it is given
+      isEvalSupported: false,
+      enableXfa: false,
+      cMapUrl: './pdfjs/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: './pdfjs/standard_fonts/',
+      ...(password !== undefined ? { password } : {}),
+    }).promise;
+  } catch (err) {
+    const n = (err as { name?: string })?.name;
+    if (n === 'PasswordException') throw new PdfOpenError(password !== undefined ? 'The password is not correct.' : `“${name}” is password-protected.`, true);
+    if (n === 'InvalidPDFException') throw new PdfOpenError(`“${name}” is damaged or is not a valid PDF.`);
+    throw new PdfOpenError(`Could not open “${name}”: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const pages: PageGeometry[] = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const vp = page.getViewport({ scale: 1 });
+    pages.push({ width: vp.width, height: vp.height, rotate: page.rotate, view: [...page.view] });
+  }
+  const labels = await doc.getPageLabels().catch(() => null);
+  const [outline, fields] = await Promise.all([doc.getOutline().catch(() => null), doc.getFieldObjects().catch(() => null)]);
+  const allFields = fields ? Object.values(fields).flat() as Array<{ type?: string }> : [];
+  return {
+    doc, pages, labels,
+    notes: {
+      outline: !!outline && outline.length > 0,
+      formFields: allFields.length > 0,
+      signatures: allFields.some((f) => f.type === 'signature'),
+    },
+  };
+}
+
+/** Displayed size at scale 1 once the user's extra rotation is added. */
+export function displaySize(g: { width: number; height: number }, extraRotate: number): { width: number; height: number } {
+  // g is already in the page's own rotation; a quarter turn more swaps the sides.
+  return extraRotate % 180 === 0 ? { width: g.width, height: g.height } : { width: g.height, height: g.width };
+}

@@ -1,0 +1,105 @@
+name: release
+
+# Builds the Windows app on GitHub's runners and has it signed through SignPath (free code signing for open
+# source, certificate by SignPath Foundation). Signing happens in two rounds so that both the program inside
+# the installer and the installer itself carry a signature:
+#   1. build the unpacked app, sign Oakqueill.exe
+#   2. pack the signed app into the installer and portable exe, sign those
+# Needs (Settings → Secrets and variables → Actions):
+#   secret SIGNPATH_API_TOKEN, variables SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG,
+#   SIGNPATH_SIGNING_POLICY ("test-signing" until SignPath Foundation approves the project, then "release-signing").
+# The artifact configurations "app" and "installers" are set up in SignPath; see docs/CODE_SIGNING.md.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+
+      # round 1: the program itself
+      - name: Pack the unpacked app
+        working-directory: apps/desktop
+        run: npx electron-builder --win --x64 --dir
+      - id: upload-app
+        uses: actions/upload-artifact@v4
+        with: { name: app-unsigned, path: apps/desktop/release/win-unpacked, if-no-files-found: error }
+      - name: Sign Oakqueill.exe
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.upload-app.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-app
+
+      # round 2: installer and portable exe, built from the signed program without rebuilding it
+      - name: Pack installer and portable exe
+        working-directory: apps/desktop
+        run: npx electron-builder --win nsis portable --x64 --prepackaged ../../signed-app
+      - id: upload-installers
+        uses: actions/upload-artifact@v4
+        with: { name: installers-unsigned, path: 'apps/desktop/release/*.exe', if-no-files-found: error }
+      - name: Sign installer and portable exe
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+          artifact-configuration-slug: installers
+          github-artifact-id: ${{ steps.upload-installers.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      # the downloads and the program they install must all carry a valid signature
+      - name: Check signatures
+        shell: pwsh
+        run: |
+          $bad = @()
+          $files = @(Get-ChildItem signed -Filter *.exe)
+          if ($files.Count -ne 2) { throw "expected 2 signed files, found $($files.Count)" }
+          $setup = $files | Where-Object Name -like 'Oakqueill-Setup-*'
+          Start-Process $setup.FullName -ArgumentList '/S', "/D=$env:RUNNER_TEMP\oakq-install" -Wait
+          $files += Get-Item "$env:RUNNER_TEMP\oakq-install\Oakqueill.exe"
+          foreach ($f in $files) {
+            $s = Get-AuthenticodeSignature $f.FullName
+            "{0}: {1} ({2})" -f $f.Name, $s.Status, $s.SignerCertificate.Subject
+            if ($s.Status -ne 'Valid' -and $env:POLICY -eq 'release-signing') { $bad += $f.Name }
+            if ($null -eq $s.SignerCertificate) { $bad += $f.Name }
+          }
+          if ($bad) { throw "not signed: $($bad -join ', ')" }
+        env:
+          POLICY: ${{ vars.SIGNPATH_SIGNING_POLICY }}
+
+      - uses: actions/upload-artifact@v4
+        with: { name: oakqueill-windows, path: 'signed/*.exe', if-no-files-found: error }
+
+  # a tag like v0.2.0 makes a draft release with the signed files; publish it by hand after a last look
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: oakqueill-windows, path: dist }
+      - run: gh release create "$GITHUB_REF_NAME" dist/*.exe --draft --title "Oakqueill PDF Editor $GITHUB_REF_NAME" --generate-notes --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
