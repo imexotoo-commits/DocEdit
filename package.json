@@ -2,16 +2,17 @@
   "name": "docedit",
   "private": true,
   "version": "0.0.0",
-  "description": "Oakqueill PDF Editor for Windows 11: headless core, CLI and the Electron desktop app.",
+  "description": "Oakqueill PDF Editor for Windows 11: headless core, CLI and the Electron desktop app, and the Chrome/Edge PDF viewer extension.",
   "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/*",
-    "apps/desktop"
+    "apps/desktop",
+    "apps/browser"
   ],
   "scripts": {
-    "build": "npm run build -w @docedit/core && npm run build -w @docedit/cli && npm run build -w @docedit/desktop",
-    "typecheck": "npm run build -w @docedit/core && tsc -p packages/cli/tsconfig.json --noEmit && tsc -p apps/desktop/tsconfig.json --noEmit",
+    "build": "npm run build -w @docedit/core && npm run build -w @docedit/cli && npm run build -w @docedit/desktop && npm run build -w @docedit/browser",
+    "typecheck": "npm run build -w @docedit/core && tsc -p packages/cli/tsconfig.json --noEmit && tsc -p apps/desktop/tsconfig.json --noEmit && tsc -p apps/browser/tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm run test",
     "app": "npm run build -w @docedit/core && npm start -w @docedit/desktop"
