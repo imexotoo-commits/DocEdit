@@ -26,9 +26,10 @@ npm run app              # build and launch the desktop app
 | form list/fill/flatten | implemented + tested (text, checkbox, dropdown covered; radio/list lightly) |
 | text extract + find (with rectangles) | implemented + tested (horizontal text) |
 | redaction (rasterize) + verify + prune | implemented + tested (incl. rotated page, link leak, raw bytes) |
-| cryptographic signing/verify | **designed only** (`signPdf` throws `NOT_IMPLEMENTED`), see SIGNING.md |
-| encryption/password open | **not implemented** (`ENCRYPTED` error), see LICENSES.md |
-| viewer / app | `apps/desktop`: roadmap phases 1-2 (see FEATURES.md); Windows installer + portable .exe via `npm run dist -w @docedit/desktop` |
+| cryptographic signing/verify | implemented + tested (.p12/.pfx RSA, PAdES B-B style; timestamps and revocation not yet), see SIGNING.md |
+| encryption/password open | implemented + tested (`decryptPdf`, `protectPdf` AES-256) |
+| viewer / app | `apps/desktop`: roadmap phases 1-3 and parts of 4 (see FEATURES.md and ROADMAP.md); Windows installer + portable .exe via `npm run dist -w @docedit/desktop` |
+| browser viewer | `apps/browser`: Chrome/Edge extension, see BROWSER_EXTENSION.md |
 
 ## Please review (in this order)
 1. **Redaction correctness** (`src/redact.ts`, `test/redact.test.ts`): try to break it. Ideas: incremental-update PDFs with old revisions, form XObjects, Type3 fonts, pages with `/UserUnit`, huge pages (memory), pages with transparency groups, image-only pages, pages whose `/Contents` is an array. Verify nothing of a marked page survives anywhere in the bytes.

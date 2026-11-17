@@ -1,62 +1,94 @@
 # Product roadmap
 
-Build a local-first desktop PDF reader and editor for reading, creating, organizing, reviewing, protecting, and publishing documents. The foundation ships a headless TypeScript library and CLI. The desktop app is planned. Use the workflows below as the implementation brief.
+Oakqueill PDF Editor is a local-first desktop PDF reader and editor for reading, creating, organizing, reviewing, protecting and publishing documents. A headless TypeScript library (`packages/core`) and a CLI sit under every app. The Windows desktop app, with its installer, portable build and Chrome/Edge viewer extension, is on the `Win11` branch. macOS is on `macOS` and iPhone/iPad on `iOS`. This document is the plan; [FEATURES.md](FEATURES.md) is the detailed status of each feature.
+
+_Status as of 2026-11-17._ ✅ done · 🟡 partly done · ⬜ not started.
 
 ## Clean-room scope and sources
 
-Follow [CLEAN_ROOM.md](CLEAN_ROOM.md). The feature names describe ordinary user tasks. Derive PDF interoperability from [ISO 32000-2](https://www.iso.org/standard/75839.html), the [PDF Association standards catalog](https://pdfa.org/sponsored-standards/), and approved library documentation. Write original code, interface layouts, icons, help, and fixtures. Record implementation sources in [PROVENANCE.md](PROVENANCE.md) and dependencies in [LICENSES.md](LICENSES.md). Keep the project license decision on the release checklist.
+Follow [CLEAN_ROOM.md](CLEAN_ROOM.md). The feature names describe ordinary user tasks. Derive PDF interoperability from [ISO 32000-2](https://www.iso.org/standard/75839.html), the [PDF Association standards catalog](https://pdfa.org/sponsored-standards/), and approved library documentation. Write original code, interface layouts, icons, help, and fixtures. Record implementation sources in [PROVENANCE.md](PROVENANCE.md) and dependencies in [LICENSES.md](LICENSES.md).
 
 In the US, copyright distinguishes functional ideas, processes, and methods of operation from their particular expression. That supports independently designing ordinary workflows such as merging pages, redacting content, and creating PDFs from office documents. See [17 U.S.C. § 102(b)](https://www.copyright.gov/title17/92chap1.html).
 
 Patent clearance is open for every proposed implementation. A feature name, independent development, or use of a published standard does not establish freedom to operate. Once concrete approaches and launch markets are chosen, have qualified counsel review relevant in-force claims, legal status, and any standards-related licensing terms. Start with [USPTO Patent Public Search](https://www.uspto.gov/patents/search/patent-public-search) for US records. Record the approach, jurisdictions, and review outcome for release. This roadmap identifies candidates for independent implementation and makes no patent clearance finding.
 
-## Foundation and work order
+## Where things stand
 
-Core and CLI already cover page operations, metadata, stamps, image placement, visual signatures, basic AcroForms, text search, and raster redaction. Cryptographic signing and verification are stubs. Password-protected files are unsupported. See [HANDOFF_CODEX.md](HANDOFF_CODEX.md) for the initial review, especially coordinate handling and redaction. Run the existing checks before extending the core.
+Phases 1 to 3 are built in the desktop app, with core tests for each workflow, and parts of phase 4 are done (export, scan, page furniture). The project is MIT licensed. The app is hardened by three code reviews and a stress test ([CODE_REVIEW.md](CODE_REVIEW.md)):
+- PDF work runs in a document worker with a time limit, so a huge or hostile file cannot freeze the windows.
+- Saves go through a temporary file.
+- The renderer is sandboxed, and links, trust decisions and file writes are decided in the main process.
 
-Deliver phases 1 and 2 as the first usable desktop release. Enable applied redaction only after its verification criteria pass. Keep the byte-oriented headless core and put file access, platform integration, and UI in the app. Use an ordered operation history with stable page identities across reorders. Render and convert in cancellable background jobs, write saves through a temporary file, and leave the source intact on failure.
+What stands between this and a first public Windows release is mostly verification on real systems (see [Release 1](#release-1-first-signed-windows-release)), not new features.
+
+The architecture rules still hold: a byte-oriented headless core, file access and platform integration in the app, an ordered edit history with stable page identities, cancellable background jobs for rendering and conversion, and saves that leave the source intact on failure.
+
+## Release 1: first signed Windows release
+
+| Item | Status | What is left |
+| --- | --- | --- |
+| Signed builds | 🟡 | The SignPath workflow (`.github/workflows/release.yml`) is written and the repository is public, but it has not run yet. Run it, then install the signed build on a clean Windows 11 machine and check that SmartScreen and the installer behave. |
+| Packaged app check | ⬜ | Run the installed build by hand: the document worker inside `app.asar`, opening from Explorer, printing, crash recovery, and uninstalling. So far only the unpackaged app has been run. |
+| Office conversion | 🟡 | Built around an installed LibreOffice (isolated profile, macros off, timeout, cancel), but tested only against a stand-in program. Test with real LibreOffice on tables, page breaks, images, spreadsheet print areas, slides and non-Latin fonts. |
+| Scan to PDF | 🟡 | Windows scanning (WIA) lists devices. Do a real scan on hardware (flatbed and feeder). |
+| Exports opened elsewhere | ⬜ | Open exported .docx files in Word. Reopen saved, redacted, signed and protected PDFs in another standards-based reader, as the release acceptance below requires. |
+| Browser viewer in the stores | ⬜ | Publish the Chrome/Edge extension (`apps/browser`) to the Chrome Web Store and Edge Add-ons, then put the two store IDs into `apps/desktop/build/installer.nsh` so the installer offers it. See [BROWSER_EXTENSION.md](BROWSER_EXTENSION.md). Run it once in Edge. |
+| Updates | ⬜ | Installed copies have no way to receive fixes. Add a signed update check (opt-in, no telemetry) or at least a "new version available" notice, before the first public release. |
+| Legal | ⬜ | Patent review as described above. Confirm the third-party notices in the installer match the bundled packages. |
 
 ## Phase 1 — Read, create, and organize
 
-| Feature | Behavior and acceptance criteria |
-| --- | --- |
-| Open and read | Open PDFs from the file picker or drag and drop. Show a page canvas, thumbnails, outline, page labels, zoom, fit width/page, and a page number control. Render visible pages first. Support keyboard navigation, selectable text, safe links, and printing with page range, orientation, and scaling. Verify mixed sizes and rotations. Present a clear error for damaged or unsupported files. |
-| Find and copy | Search selectable text, show page and excerpt, highlight each occurrence, and navigate between hits. Support case-sensitive search and text selection. Check that hits align after zoom, rotation, and cropping. Identify pages with no searchable text and surface OCR once available. |
-| Merge PDFs | Add files, preview them, choose per-file page ranges, reorder files or individual pages, and save one PDF. Preserve page sizes and rotations. Remap valid links and outlines where supported. Detect colliding form field names and disclose features the merge cannot preserve. Verify exact output order and render representative pages in another reader. |
-| Organize pages | Reorder, duplicate, rotate, crop, delete, and insert blank pages or pages from another PDF. Support keyboard controls as well as dragging. Split by ranges or fixed page count and extract selections into a new file. Distinguish crop, which changes visible bounds, from removal of content. Verify page order, destination mapping, and source preservation. |
-| Create from images or text | Create blank PDFs and combine ordered JPEG/PNG images into pages. Respect image orientation and offer page size, margins, fit, and preview. Paginate plain text with embedded fonts and Unicode coverage. Verify portrait and landscape inputs, multipage output, and text extraction. |
-| Create from Word and other Office files | Start with DOCX, then add XLSX, PPTX, ODT, ODS, and ODP after testing the converter. Use a local, documented export provider, such as an installed LibreOffice executable via its public command-line interface after source and dependency review. Offer manual import of a PDF exported from Word when no provider is available. Detect capabilities, convert in an isolated job with a timeout, and preview page count and layout before saving. Disable macros and external resource access, clean temporary data, and surface missing fonts or layout differences when detectable. Test tables, page breaks, hyperlinks, embedded images, spreadsheet print areas, slide sizes, and non-Latin fonts. See [Word PDF export](https://support.microsoft.com/en-us/word/export-word-document-as-pdf) and [LibreOffice PDF export parameters](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html). |
-| Save and recover | Provide undo/redo, dirty-state indicators, Save, Save As, and crash recovery for ordinary edits. Warn when an edit would invalidate a digital signature. Protect recovery data and remove it when discarded. Test disk-full and interrupted writes with an intact original and a recoverable edit session. |
+| Feature | Status | What is left |
+| --- | --- | --- |
+| Open and read | ✅ | Done: open from the dialog, drag and drop, the command line and "Open with"; continuous pages; thumbnails, outline and page labels; zoom and fit; selectable text; safe links; printing with range, orientation and scaling; clear errors. Left: single-page and two-page views, document tabs, and recent files. |
+| Find and copy | ✅ | Done: case-sensitive search with highlights that align on rotated and cropped pages, and a notice for pages without text. Left: OCR for those pages (phase 4). |
+| Merge PDFs | 🟡 | Done: files and pages in any order. Left: keep bookmarks and form fields across a merge or a page rebuild (today the app warns that form fields are dropped), and detect form field names that collide. |
+| Organize pages | ✅ | Reorder, duplicate, rotate, crop (visible area only), delete, blank pages, pages from another PDF, split and extract, with keyboard and drag. |
+| Create from images or text | ✅ | Blank pages, JPEG/PNG with EXIF orientation, page size, margins and fit, and plain text with an embedded Unicode font. Characters the font lacks (for example CJK) are reported; a wider font is left to do. |
+| Create from Office files | 🟡 | See Release 1. |
+| Save and recover | ✅ | Undo/redo, dirty indicator, Save and Save As through a temporary file, crash recovery (off for protected documents), and a warning that saving invalidates signatures. |
 
 ## Phase 2 — Review, fill, and prepare documents
 
-| Feature | Behavior and acceptance criteria |
-| --- | --- |
-| Annotations | Support highlight, underline, strikeout, sticky note, free text, shapes, ink, and stamps. Let users select, edit, and delete their annotations. Save standard annotation dictionaries and appearances. Verify round-trip geometry and appearance in a second reader. |
-| Bookmarks, links, and metadata | Create and edit nested bookmarks and links to internal pages or external URLs. Edit document properties with a clear preview of saved values. Remap internal destinations after page edits and require a deliberate action before opening external URLs. |
-| Stamps and page furniture | Place images, watermarks, headers, footers, page numbers, and Bates numbers on selected pages. Preview positioning, opacity, and numbering on mixed page sizes. Embed fonts for supported Unicode text and verify that numbering remains sequential. |
-| Forms | Fill text fields, checkboxes, radio buttons, dropdowns, and lists. Keep values and appearances in sync and support keyboard navigation. Add basic AcroForm field creation and editing after fill works. Export a flattened copy on request and identify unsupported form types, including XFA. Verify editable and flattened outputs in another reader. |
-| Visual signatures | Draw, type, or import a signature image, then place and resize it on a page. Label it as a visual signature and save it as document content. Keep reusable signature assets local and user-controlled. |
+| Feature | Status | What is left |
+| --- | --- | --- |
+| Annotations | 🟡 | Done: highlight, underline, strikeout, note, free text, shapes and ink, as standard annotations with appearances. Left: editing or deleting annotations that are already in a file, comment replies, and rubber stamps. |
+| Bookmarks, links and metadata | 🟡 | Done: an editable bookmark tree that follows page edits, new links to pages or addresses, and a properties dialog. Left: editing links already in a file. |
+| Stamps and page furniture | 🟡 | Done: text watermark, headers, footers, page numbers and Bates numbers with a preview. Left: image watermark and editing page labels. |
+| Forms | 🟡 | Done: fill text, checkbox, radio, dropdown and list fields in reading order, and flatten; XFA is reported as unsupported. Left: a field designer, and form data export and import (FDF/XFDF/JSON/CSV). PDF JavaScript stays off for good. |
+| Visual signatures | ✅ | Draw, type or import, reusable signature and initials kept locally, and ticks and marks. |
 
 ## Phase 3 — Redact, sanitize, and protect
 
-| Feature | Behavior and acceptance criteria |
-| --- | --- |
-| Permanent redaction | Mark regions manually or from text search, review every mark on the rendered page, then apply to a new copy. Clearly show pending versus applied marks. Start with rasterizing affected pages and disclose the loss of searchable text and accessibility structure on those pages. Check that sensitive content cannot be recovered through text extraction, old revisions, underlying image data, annotations, form values, or other retained objects. Fail closed on unsupported inputs or failed verification. Include rotated/cropped pages, unusual origins, image-only pages, and cross-page duplicates in test fixtures. Scope the result to marked areas and distinguish whole-document cleanup. See [REDACTION.md](REDACTION.md). |
-| Sanitize before sharing | Inspect categories such as metadata, attachments, comments, hidden layers, scripts/actions, and embedded form data. Let the user review selected removals and export a separate copy. Verify that removed objects and historical revisions are absent from the output. Explain any visible changes and any categories the sanitizer could not inspect. |
-| Certificate signatures | Sign with a user-selected certificate and verify signed byte ranges, trust, timestamps when available, and post-signing changes. Use standard PDF/CMS and PAdES profiles where implemented. Show distinct results for integrity, trust, and subsequent edits. Keep private keys in their provider. Check known valid, tampered, expired, and untrusted fixtures. See [SIGNING.md](SIGNING.md). |
-| Password protection | Support password-based open and encrypted Save As once the writer can handle supported standard security handlers. Treat credentials as transient and keep them out of logs and recovery files. Show an explicit result for wrong passwords and unsupported encryption. Verify output opens with the right password and that protected strings are inaccessible without it. |
+| Feature | Status | What is left |
+| --- | --- | --- |
+| Permanent redaction | ✅ | Done: rasterizing redaction into a verified new copy (or the open document, by setting), including annotations and form values. It fails closed and refuses marks that would hide nothing. The CLI verifies before writing. Left: strategy B (keep the unmarked text on redacted pages searchable; [REDACTION.md](REDACTION.md)). |
+| Sanitize before sharing | 🟡 | Done: metadata, attachments, comments, scripts and actions (including `/Next` chains and bookmarks), form data, thumbnails and earlier revisions, re-inspected before saving. Left: removing hidden layers (today they are only reported). |
+| Certificate signatures | 🟡 | Done: sign with a .p12/.pfx (RSA), and verify integrity, coverage, later changes and trust (checked at verification time, user-chosen trusted certificates). Left: RFC 3161 timestamps and long-term validation, revocation checks (OCSP/CRL), signing from the Windows certificate store and smart cards, and ECDSA keys. See [SIGNING.md](SIGNING.md). |
+| Password protection | ✅ | Open with a password (in memory only), AES-256 protect, change or remove a password, and set permissions. Protected copies stay protected. |
 
 ## Phase 4 — Edit, scan, export, and validate
 
-| Feature | Behavior and acceptance criteria |
-| --- | --- |
-| Scan and OCR | Import scanned images or PDFs, with platform scanner integration as available. Offer page ranges, rotation, deskew, language selection, and cancellable local recognition. Preserve visible page imagery and align an invisible searchable text layer. Avoid duplicate layers on pages with existing text. Test multilingual and rotated scans for search and selection alignment. |
-| Edit existing page content | Begin with selected text runs and images the writer can identify and replace safely. Preview placement, font substitution, and wrapping. Keep unrelated objects stable and surface unsupported selections. Add object move, resize, and image replacement. Test text extraction and rendering after reopen. |
-| Export | Export chosen pages to PNG/JPEG and selectable text to UTF-8. Add CSV for reviewed tables and editable DOCX conversion later. Preserve logical reading order where available and describe editable conversion as best-effort reconstruction. Test columns, tables, scans, and mixed fonts. |
-| Optimize | Estimate size changes, provide image quality and resolution options, and save an optimized copy. Report before/after sizes and preserve text, links, and forms for presets that promise preservation. Include signed-document handling in the preview. |
-| Compare and batch | Compare two versions using page alignment, visual differences, and text changes where available. Let the user navigate changes and export a report. Batch supported operations with an output preview, collision handling, cancellation, and a per-file success or failure summary. |
-| Accessibility and archival | Keep the desktop interface keyboard accessible throughout. Add document inspection for tags, language, headings, reading order, alt text, and table structure. Offer tagged export and PDF/A validation for specific supported profiles. Require profile validation before claiming conformance and distinguish automated checks from items needing human review. |
+| Feature | Status | What is left |
+| --- | --- | --- |
+| Scan and OCR | 🟡 | Done: Windows scanning to PDF (see Release 1). Left: OCR with an invisible text layer (candidate: Tesseract, Apache-2.0), with language choice, deskew, rotation, cancellation, and no duplicate layer on pages that already have text. |
+| Edit existing page content | ⬜ | Start with replacing a whole text run in the same font, then images: move, resize and replace. |
+| Export | ✅ | .docx rebuilt from page text, .txt, and PNG/JPEG per page. Left: CSV for reviewed tables. |
+| Optimize | 🟡 | Object streams on save. Left: image downsampling and quality presets, with before and after sizes and signed-document handling. |
+| Compare and batch | ⬜ | Compare two versions (visual and text differences, report). A batch window; today the CLI can be scripted. |
+| Accessibility and archival | ⬜ | The interface is keyboard accessible. Left: inspect tags, language, headings, reading order, alt text and tables; tagged export; PDF/A validation for specific profiles. |
+| Attachments and layers | ⬜ | View and manage attachments and optional content layers. |
+
+## Engineering work
+
+| Item | Status | What is left |
+| --- | --- | --- |
+| Large files | ⬜ | Every operation holds the whole file in memory (`Uint8Array` in and out). Measure memory and time on large documents, and design a document handle or streaming API before large-file support is promised. |
+| Decompression limit | 🟡 | A file that expands enormously now only costs the document worker (time limit, crash isolation). There is still no byte cap inside pdf-lib's stream decoding. |
+| PDF writer | ⬜ | Evaluate the pdf-lib fork against alternatives (PDFium via WASM, qpdf) on the existing tests: coverage of damaged files, incremental saves, and memory. |
+| Text hit boxes | 🟡 | Approximate for unusual fonts and vertical text. |
+| Browser extension, other browsers | ⬜ | Firefox needs its own packaging. The macOS browsers are built on the `macOS` branch. |
+| Linux package | ⬜ | The Electron app should run as is; packaging (AppImage or deb) and testing are left. |
 
 ## Acceptance for each release
 
@@ -64,4 +96,4 @@ Deliver phases 1 and 2 as the first usable desktop release. Enable applied redac
 - Reopen saved files in an independent standards-based reader. Verify expected content, geometry, links, and form behavior for the operations that promise to preserve them.
 - Test memory limits, cancellation, damaged documents, and platform failure paths. Keep document bytes local by default and run document parsing and conversion with resource limits.
 - Inspect output bytes for security-sensitive changes. Include negative controls and verify failure paths prevent a misleading success state.
-- Track existing constraints as work items. The writer rewrites files and can invalidate signatures. Built-in stamp fonts have limited character coverage. Text hit boxes are approximate for unusual text, and whole-document memory use needs measurement before large-file support is promised.
+- Track existing constraints as work items: the writer rewrites files and can invalidate signatures; built-in stamp fonts have limited character coverage; text hit boxes are approximate for unusual text.
