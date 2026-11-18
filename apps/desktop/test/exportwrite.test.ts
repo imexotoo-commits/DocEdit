@@ -77,12 +77,22 @@ describe('export writing keeps existing files safe', () => {
     expect(readFileSync(join(d, 'doc-1 (2).pdf'), 'utf8')).toBe('mine');
   });
 
-  it('unique files skip names this batch already used (case-insensitively) and existing files', async () => {
+  it('unique files skip names this batch already used, whatever the letter case', async () => {
+    const d = dir();
+    const taken = new Set<string>();
+    expect(await writeUniqueFile(d, 'b.pdf', bytes('1'), taken)).toBe('b.pdf');
+    expect(await writeUniqueFile(d, 'B.pdf', bytes('2'), taken)).toBe('B (2).pdf'); // the batch compares names as Windows does
+    expect(readFileSync(join(d, 'b.pdf'), 'utf8')).toBe('1');
+  });
+
+  it('unique files skip files already on disk', async () => {
     const d = dir();
     writeFileSync(join(d, 'a.pdf'), 'old');
     const taken = new Set<string>();
     expect(await writeUniqueFile(d, 'a.pdf', bytes('1'), taken)).toBe('a (2).pdf');
-    expect(await writeUniqueFile(d, 'A.pdf', bytes('2'), taken)).toBe('A (3).pdf');
+    // "A.pdf" is the same file as "a.pdf" on a case-insensitive file system (Windows, macOS) and a free name on a
+    // case-sensitive one (Linux), where using it replaces nothing
+    expect(await writeUniqueFile(d, 'A.pdf', bytes('2'), taken)).toBe(caseInsensitiveFs ? 'A (3).pdf' : 'A.pdf');
     expect(readFileSync(join(d, 'a.pdf'), 'utf8')).toBe('old');
   });
 
