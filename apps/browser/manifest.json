@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Oakqueill PDF Viewer",
+  "short_name": "Oakqueill",
+  "description": "Open PDFs in your browser with Oakqueill: zoom, find, print and save. Everything stays on your computer.",
+  "version": "0.0.0",
+  "minimum_chrome_version": "128",
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["declarativeNetRequestWithHostAccess", "webNavigation", "webRequest", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [{ "resources": ["viewer.html"], "matches": ["<all_urls>"] }],
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" }
+}

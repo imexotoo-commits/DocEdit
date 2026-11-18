@@ -28,6 +28,9 @@ npm run dist:mac -w @docedit/desktop
 Produces `apps/desktop/release/Oakqueill-<version>-mac-<arch>.dmg` and a zip (universal: Apple Silicon and Intel). Local and CI test builds are ad-hoc signed, not notarized, so on first launch right-click the app and choose Open (or allow it in System Settings, Privacy & Security). Notarized releases need an Apple Developer ID: see [docs/MACOS_RELEASE.md](docs/MACOS_RELEASE.md). Finder "Open With", double-click and dropping a PDF on the Dock icon open files in the app (each file in its own window, never replacing an open document).
 Settings, saved signatures and crash-recovery data live in `~/Library/Application Support/Oakqueill`.
 
+## Browser extension (Chrome, Safari, Firefox, Opera and more)
+`apps/browser` is **Oakqueill PDF Viewer**: PDFs open in an Oakqueill viewer in Chrome, Edge, Brave, Opera, Vivaldi and Arc (one package), in Firefox and in Safari. Build every version with `npm run ext:build`; the Safari app with `npm run ext:safari`. How to install it in each browser, and what each one can and cannot catch, is in [docs/BROWSER_EXTENSION.md](docs/BROWSER_EXTENSION.md).
+
 ## Other platforms
 | Branch | What it is |
 | --- | --- |

@@ -2,19 +2,26 @@
   "name": "docedit",
   "private": true,
   "version": "0.0.0",
-  "description": "Oakqueill PDF Editor for macOS: headless core, CLI and the Electron desktop app.",
+  "description": "Oakqueill PDF Editor for macOS: headless core, CLI, the Electron desktop app and the browser extension.",
   "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/*",
-    "apps/desktop"
+    "apps/desktop",
+    "apps/browser"
   ],
   "scripts": {
-    "build": "npm run build -w @docedit/core && npm run build -w @docedit/cli && npm run build -w @docedit/desktop",
-    "typecheck": "npm run build -w @docedit/core && tsc -p packages/cli/tsconfig.json --noEmit && tsc -p apps/desktop/tsconfig.json --noEmit",
+    "build": "npm run build -w @docedit/core && npm run build -w @docedit/cli && npm run build -w @docedit/desktop && npm run build -w @docedit/browser",
+    "typecheck": "npm run build -w @docedit/core && tsc -p packages/cli/tsconfig.json --noEmit && tsc -p apps/desktop/tsconfig.json --noEmit && tsc -p apps/browser/tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm run test",
-    "app": "npm run build -w @docedit/core && npm start -w @docedit/desktop"
+    "app": "npm run build -w @docedit/core && npm start -w @docedit/desktop",
+    "security:probe": "npm run build -w @docedit/core && npm run build -w @docedit/desktop && node apps/desktop/scripts/security-probe.mjs",
+    "fuzz": "npm run build -w @docedit/core && node packages/core/scripts/fuzz.mjs",
+    "ext:build": "npm run build:all -w @docedit/browser",
+    "ext:lint": "npm run lint:firefox -w @docedit/browser",
+    "ext:safari": "npm run safari -w @docedit/browser",
+    "ext:dist": "npm run dist -w @docedit/browser"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

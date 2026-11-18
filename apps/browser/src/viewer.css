@@ -1,0 +1,23 @@
+/* the browser viewer: the desktop styles, plus a few things only it has */
+.web-viewer .brand { min-width: 0; max-width: 40vw; }
+.web-viewer .file-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.web-viewer .more { position: relative; display: flex; align-items: center; }
+.web-viewer .more-menu { position: absolute; top: 40px; right: 0; }
+.web-thumbs { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.web-thumbs .thumb { background: transparent; }
+.web-viewer .empty-card .pw { font: inherit; width: 100%; margin: 4px 0 8px; padding: 6px 8px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.web-viewer .row.center { justify-content: center; }
+.web-viewer .loading { color: var(--muted); }
+#print-root { display: none; }
+@media print {
+  @page { margin: 0; }
+  html, body { overflow: visible !important; height: auto !important; background: #fff !important; }
+  #root { display: none !important; }
+  #print-root { display: block; }
+  #print-root img { display: block; width: 100%; height: auto; break-after: page; }
+  #print-root img:last-child { break-after: auto; }
+}
+.web-viewer .empty-card .address { max-width: 60ch; margin: 0 auto 12px; overflow-wrap: anywhere; font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); }
+.web-viewer .print-range { flex-wrap: wrap; }
+.web-viewer .print-range input { width: 9ch; font: inherit; padding: 3px 6px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.web-viewer .print-range .form-error { flex-basis: 100%; }

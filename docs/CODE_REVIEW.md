@@ -402,3 +402,26 @@ All four findings are fixed on `platform/apple`; the release validation item is 
 
 Not run: Finder opens in the real app (several files at once, with an edited document open), and the release workflow.
 
+
+## Security review and hacking test of the macOS desktop app
+
+Static review of the main process (every `ipcMain` entry point, file and path handling, window and session configuration, fuses, entitlements) plus two tools that attack the running app, both kept in the repository:
+
+- `npm run security:probe` starts the real app with a throw-away profile and a hostile PDF and attacks it from inside the page, as script running in the app window would: breaking out of the sandbox, running or injecting code, reading local files, opening windows or navigating away, device permissions, forged paths and ids on every file-touching call, settings abuse, HTML in document fields, and 300+ malformed calls to the bridge. 28 probes; the exit code is 1 when any fails.
+- `npm run fuzz` corrupts valid PDFs in eight ways (flipped and deleted bytes, truncation, oversized numbers, reference cycles, junk) and runs the engine's operations on each in a worker thread with a time and memory limit.
+
+### Found and fixed
+- **P1, any malformed one-way message crashed the app.** `docedit:document-state` read `state.dirty` without checking the shape; a page that sent nothing made the main process throw, which macOS shows as a blocking "A JavaScript error occurred in the main process" dialog. Every one-way handler now goes through `onSafe` (logs and carries on) and the document state is reduced to safe values by `parseDocumentState`. Tests: `fileGuard.test.ts`; the probe's malformed-call run.
+- **P1, the page could read any local file.** A page loaded from `file://` may fetch, XHR or iframe other local files, so script running in the window could have read the user's documents. Nothing can inject script today (the probe confirms HTML and script in titles, outlines and notes stay inert), but it was one step away. The main process now cancels every `file://` request outside the app's own renderer folder (`fileGuard.ts`), tested for `../`, escaped and encoded escapes, look-alike folder names and network shares, and checked inside the packaged `app.asar`.
+- **P2, any truthy value closed a window without the unsaved-changes question.** `docedit:close-after-save` now needs exactly `true`.
+- **P2, a hostile PDF could stall opening for ever.** The fuzz test found 1 in about 100 corrupted files that never finishes `getDocument` in pdf.js 4.10.38 (tiny files with an object number such as 2147483647). pdf.js 6.5.438 rejects them cleanly. Opening a file now has a 30-second limit (`OPEN_TIMEOUT_MS`) and a deadline over the page-size reads, with a plain message; the window stays responsive meanwhile. Upgrading pdf.js across two major versions is the real fix and was not attempted here.
+- **Hardening.** A permission *check* handler (denies all, next to the existing request handler) and `will-attach-webview` refused for every web contents.
+
+### Reviewed, no change needed
+Recovery and signature ids are matched against strict patterns before any path is built; export and split names are reduced to plain file names; in-place saves only reach files this session opened or wrote; the page cannot pass a path (`openDropped` takes a `File` and the preload derives the path); other files are readable only after the user picked them; web and mail links open only after the user has seen the address and are restricted to http, https and mailto; settings accept only known values; the content security policy allows scripts from the app only; the renderer runs with context isolation and the sandbox and cannot navigate or open windows; fuses are set as intended (`RunAsNode` off, Node options and inspector arguments off, ASAR integrity and app-only-from-ASAR on); `npm audit` reports no known vulnerabilities.
+
+### Open items
+- **Entitlements.** The release build still carries `allow-unsigned-executable-memory` and `disable-library-validation`. The second is needed for the ad-hoc test builds; a Developer-ID build can probably drop it, but that can only be tested with a real certificate. The App Sandbox is not enabled.
+- **`GrantFileProtocolExtraPrivileges` is still on** because the app loads its page from `file://`. The allowlist closes the file-reading hole; serving the page from a custom protocol and turning the fuse off would remove the cause.
+- **Core text functions** (`extractText`, `findText`, used by the CLI) can still hang on those pdf.js inputs; they have no time limit. The app does not call them.
+- **pdf.js upgrade** (see above), and a pass over the iOS app's native bridge, which this review did not cover.

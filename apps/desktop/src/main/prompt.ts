@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain, nativeTheme } from 'electron';
+import { onSafe } from './ipcSafe.js';
 import { join } from 'node:path';
 import type { AskAnswer, AskOptions } from '../shared/prompt.js';
 
@@ -13,10 +14,10 @@ let here = '';
 export function registerPrompts(dir: string) {
   here = dir;
   ipcMain.handle('docedit:prompt-options', (e) => open.get(e.sender.id)?.o ?? null);
-  ipcMain.on('docedit:prompt-answer', (e, a: unknown) => {
+  onSafe('docedit:prompt-answer', (e, a: unknown) => {
     if (a === 'confirm' || a === 'cancel' || a === 'extra') open.get(e.sender.id)?.done(a);
   });
-  ipcMain.on('docedit:prompt-ready', (e, height: unknown) => {
+  onSafe('docedit:prompt-ready', (e, height: unknown) => {
     const win = BrowserWindow.fromWebContents(e.sender);
     if (!win || !open.has(e.sender.id) || typeof height !== 'number') return;
     const want = Math.min(Math.max(Math.ceil(height), 120), 640);

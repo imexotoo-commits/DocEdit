@@ -13,6 +13,8 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { MenuCommand, OpenedFile, SaveRequest, SaveResult } from '../shared/api.js';
 import { writeUniqueFile } from './exportwrite.js';
+import { onSafe } from './ipcSafe.js';
+import { isInsideDir, parseDocumentState } from './fileGuard.js';
 import { pickWindowForOpen } from './openRouting.js';
 import { readPdfFile, writeFileSafely } from './files.js';
 import { printPages } from './print.js';
@@ -279,13 +281,14 @@ function registerIpc() {
     }
   });
 
-  ipcMain.on('docedit:document-state', (e, state: { title: string; dirty: boolean }) => {
+  onSafe('docedit:document-state', (e, raw: unknown) => {
     const win = BrowserWindow.fromWebContents(e.sender);
     if (!win) return;
+    const state = parseDocumentState(raw); // the page is not trusted to send the right shape
     const st = windowState.get(win);
-    if (st) { st.dirty = !!state.dirty; st.hasDoc = !!state.title; if (st.hasDoc) st.claimed = false; }
+    if (st) { st.dirty = state.dirty; st.hasDoc = !!state.title; if (st.hasDoc) st.claimed = false; }
     win.setTitle(`${state.dirty ? '• ' : ''}${state.title ? state.title + ' — ' : ''}Oakqueill PDF Editor`);
-    win.setDocumentEdited(!!state.dirty);
+    win.setDocumentEdited(state.dirty);
   });
 
   ipcMain.handle('docedit:open-external', async (e, raw: unknown) => {
@@ -333,7 +336,7 @@ function registerIpc() {
   ipcMain.handle('docedit:save-export', (e, req) => saveExport(BrowserWindow.fromWebContents(e.sender), req));
   ipcMain.handle('docedit:settings-set', (_e, patch: unknown) => settings.set(patch));
 
-  ipcMain.on('docedit:edit-command', (e, cmd: unknown) => {
+  onSafe('docedit:edit-command', (e, cmd: unknown) => {
     if (cmd === 'cut' || cmd === 'copy' || cmd === 'paste' || cmd === 'selectAll') e.sender[cmd]();
   });
 
@@ -410,7 +413,7 @@ function registerIpc() {
   });
   ipcMain.handle('docedit:office-converter', () => officeConverter());
   ipcMain.handle('docedit:convert-office', (e, path: unknown) => convertOffice(e.sender.id, String(path)));
-  ipcMain.on('docedit:cancel-convert', (e) => cancelConversion(e.sender.id));
+  onSafe('docedit:cancel-convert', (e) => cancelConversion(e.sender.id));
   ipcMain.handle('docedit:read-text', (_e, path: string) => readTextFile(String(path)));
   ipcMain.handle('docedit:list-fields', (_e, pdf: Uint8Array) => core.listFormFields(pdf));
   ipcMain.handle('docedit:read-image', (_e, path: string) => readImage(String(path)));
@@ -438,7 +441,7 @@ function registerIpc() {
 
   // A PDF passed on the command line (e.g. "Open with") opens in the first window once its page says it is ready.
   let firstReady = true;
-  ipcMain.on('docedit:ready', (e) => {
+  onSafe('docedit:ready', (e) => {
     const win = BrowserWindow.fromWebContents(e.sender);
     const st = win && windowState.get(win);
     if (!win || !st) return;
@@ -449,10 +452,11 @@ function registerIpc() {
     flushWindow(win);
   });
 
-  ipcMain.on('docedit:close-after-save', (e, saved: boolean) => {
+  onSafe('docedit:close-after-save', (e, saved: unknown) => {
     const win = BrowserWindow.fromWebContents(e.sender);
     const st = win && windowState.get(win);
-    if (win && st && saved) { st.forceClose = true; win.close(); }
+    // only a real "saved" closes the window without asking again; any other value (a truthy string, a number) must not
+    if (win && st && saved === true) { st.forceClose = true; win.close(); }
   });
 }
 
@@ -536,6 +540,10 @@ app.whenReady().then(() => {
   trust = new TrustStore(join(app.getPath('userData'), 'trusted-certificates'));
   // The app needs no camera, microphone, notifications, etc.
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
+  // The page may load files from the app's own folder only, never other local files (see fileGuard.ts).
+  const rendererDir = join(here, '../renderer');
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['file://*/*'] }, (details, cb) => cb({ cancel: !isInsideDir(rendererDir, details.url) }));
   registerIpc();
   registerPrompts(here);
   registerCoreWorker(here);
@@ -544,5 +552,8 @@ app.whenReady().then(() => {
   for (const path of startupOpens.splice(0)) openInWindow(path); // the first goes to the window just made, the rest to their own
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
+
+// Nothing in the app embeds another page: refuse <webview> outright.
+app.on('web-contents-created', (_e, contents) => { contents.on('will-attach-webview', (e) => e.preventDefault()); });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
