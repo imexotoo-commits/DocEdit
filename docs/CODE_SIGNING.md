@@ -67,4 +67,8 @@ update check and no account. Documents, saved signatures and settings stay on th
 4. In GitHub, under Settings → Secrets and variables → Actions, add the secret `SIGNPATH_API_TOKEN` and the variables
    `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG` and `SIGNPATH_SIGNING_POLICY`. Use `test-signing` until
    the Foundation approves the project, then `release-signing`.
-5. Run the workflow from the Actions tab, or push a tag such as `v0.2.0` to get a draft release with the signed files.
+5. Start a release by pushing a tag on the `Win11` branch, for example `git tag v0.2.0 Win11` and
+   `git push origin v0.2.0`. The workflow runs from the tagged commit, waits in SignPath for each of the two signing
+   requests to be approved, and ends with a draft GitHub release holding the signed files. (The Actions tab's "Run
+   workflow" button only appears for workflows on the default branch, `main`, which carries no workflows; use a tag.)
+   For a first try with `test-signing`, a tag such as `v0.1.0-test` keeps it apart from real releases.

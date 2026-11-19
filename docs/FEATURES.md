@@ -32,7 +32,7 @@ Priority: P0 must-have for a first usable app, P1 next, P2 later.
 
 ## Edit
 | Add text, shapes, images to a page | ✅ | P0 | As annotations (text box, rectangle, ellipse, freehand) and `placeImage`; editing existing page content is phase 4. |
-| Edit existing text in place | ⬜ | P1 | Hard: needs a content-stream text model; see ROADMAP. Start with "replace whole text run, same font". |
+| Edit existing text in place | ⬜ | P1 | Hard: needs a content-stream text model. Start with "replace whole text run, same font". |
 | Edit/replace/move images | ⬜ | P2 | |
 | Watermark / background | ✅ | P0 | Text watermark with opacity and angle, fitted to each page (image watermark ⬜). |
 | Links (add/edit) | 🟡 | P0 | Add links to a page or a web/mail address; pending links can be removed. Editing links already in a file ⬜. |

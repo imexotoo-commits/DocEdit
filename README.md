@@ -2,7 +2,7 @@
 
 Oakqueill PDF Editor is a clean-room PDF reader and editor: an open, no-subscription alternative to Acrobat-class tools. It reads, searches, prints, creates, organizes, annotates, fills forms, signs visually and redacts for real (the text is destroyed, not hidden, and the result is verified). A tested headless core library sits under every app.
 
-Read first: [docs/CLEAN_ROOM.md](docs/CLEAN_ROOM.md) (rules for contributors), then [docs/HANDOFF_CODEX.md](docs/HANDOFF_CODEX.md) (state of the code and what to do next). Licence: [MIT](LICENSE). Third-party components keep their own licences ([docs/LICENSES.md](docs/LICENSES.md)).
+Contributors: read [docs/CLEAN_ROOM.md](docs/CLEAN_ROOM.md) first (rules for contributors), then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). What works today is listed in [docs/FEATURES.md](docs/FEATURES.md). Licence: [MIT](LICENSE). Third-party components keep their own licences ([docs/LICENSES.md](docs/LICENSES.md)).
 
 _Internal names (the `@docedit/*` packages, the `docedit` command and this repository) still use the working name DocEdit._
 
@@ -51,4 +51,4 @@ const out = await applyRedactions(pdf, await findRedactionMarks(pdf, 'Jane Doe')
 | [`iOS`](../../tree/iOS) | iPhone and iPad app: core, the shared renderer and a SwiftUI shell that runs it in a web view. |
 
 ## Docs
-[FEATURES](docs/FEATURES.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [REDACTION](docs/REDACTION.md) · [SIGNING](docs/SIGNING.md) · [BROWSER_EXTENSION](docs/BROWSER_EXTENSION.md) · [ROADMAP](docs/ROADMAP.md) · [LICENSES](docs/LICENSES.md) · [PROVENANCE](docs/PROVENANCE.md)
+[FEATURES](docs/FEATURES.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [REDACTION](docs/REDACTION.md) · [SIGNING](docs/SIGNING.md) · [BROWSER_EXTENSION](docs/BROWSER_EXTENSION.md) · [CODE_SIGNING](docs/CODE_SIGNING.md) · [LICENSES](docs/LICENSES.md) · [PROVENANCE](docs/PROVENANCE.md)
