@@ -10,7 +10,7 @@
     "build": "node scripts/build.mjs",
     "start": "node scripts/build.mjs && electron .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dist": "node scripts/build.mjs && electron-builder --win --x64"
+    "dist": "node scripts/build.mjs && electron-builder --win nsis --x64 && node scripts/build-portable.mjs"
   },
   "devDependencies": {
     "@docedit/core": "0.0.0",
@@ -70,12 +70,6 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "icon": "build/icon.png"
@@ -90,10 +84,6 @@
       "license": "../../LICENSE",
       "shortcutName": "Oakqueill PDF Editor",
       "uninstallDisplayName": "Oakqueill PDF Editor"
-    },
-    "portable": {
-      "artifactName": "Oakqueill-Portable-${version}.${ext}",
-      "splashImage": "build/portable-splash.bmp"
     },
     "executableName": "Oakqueill",
     "electronFuses": {

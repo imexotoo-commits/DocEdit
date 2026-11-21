@@ -51,7 +51,9 @@ jobs:
       # round 2: installer and portable exe, built from the signed program without rebuilding it
       - name: Pack installer and portable exe
         working-directory: apps/desktop
-        run: npx electron-builder --win nsis portable --x64 --prepackaged ../../signed-app
+        run: |
+          npx electron-builder --win nsis --x64 --prepackaged ../../signed-app
+          node scripts/build-portable.mjs --app ../../signed-app
       - id: upload-installers
         uses: actions/upload-artifact@v4
         with: { name: installers-unsigned, path: 'apps/desktop/release/*.exe', if-no-files-found: error }
