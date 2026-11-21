@@ -1,6 +1,9 @@
 import type { Settings } from './settings.js';
 /** The bridge between the sandboxed renderer and the main process (exposed by the preload as window.docedit). */
 
+/** A file on the recent list. */
+export interface RecentFile { path: string; name: string; folder: string; openedAt: number }
+
 export interface ScanDevice { id: string; name: string }
 
 export interface OpenedFile {
@@ -75,7 +78,7 @@ export type MenuCommand =
   | 'zoom-in' | 'zoom-out' | 'zoom-reset' | 'fit-width' | 'fit-page'
   | 'rotate-left' | 'rotate-right' | 'delete-pages' | 'duplicate-pages' | 'insert-blank' | 'crop' | 'extract' | 'split'
   | 'properties' | 'furniture' | 'sanitize' | 'protect' | 'cert-sign'
-  | 'save-then-close-window' | 'settings' | 'export' | 'new-scan';
+  | 'save-then-close-window' | 'settings' | 'export' | 'new-scan' | 'new-tab' | 'next-tab' | 'prev-tab';
 
 export interface DocEditApi {
   /** Shows the native open dialog. Resolves null when cancelled. */
@@ -98,7 +101,8 @@ export interface DocEditApi {
   /** Asks for a folder and writes each part as its own PDF. */
   saveSplit(req: SplitRequest): Promise<SplitResult>;
   /** Tells main whether there are unsaved changes and what to show in the title bar. */
-  setDocumentState(state: { title: string; dirty: boolean }): void;
+  /** The active tab's title and unsaved state, and how many tabs have unsaved changes (for the window title and the close question). */
+  setDocumentState(state: { title: string; dirty: boolean; unsaved: number }): void;
   /** Main asks before closing a dirty window; the renderer answers through this after saving. */
   closeWindowAfterSave(saved: boolean): void;
   onMenu(handler: (cmd: MenuCommand) => void): () => void;
@@ -140,6 +144,14 @@ export interface DocEditApi {
   recoverySave(snap: RecoverySnapshot): Promise<void>;
   recoveryClear(id: string): Promise<void>;
   getSettings(): Promise<Settings>;
+  /** Recently opened files, newest first (empty when the setting is off). */
+  recentList(): Promise<RecentFile[]>;
+  /** Open a file from the recent list (only paths on it); a file that has gone is taken off the list and rejects. */
+  recentOpen(path: string): Promise<OpenedFile>;
+  recentRemove(path: string): Promise<void>;
+  recentClear(): Promise<void>;
+  /** Called when the recent list changes. */
+  onRecent(handler: (list: RecentFile[]) => void): () => void;
   /** Whether Windows sees a scanner (checked in the background; false until the first check has finished). */
   scannerPresent(): Promise<boolean>;
   /** Called when a scanner appears or disappears. */

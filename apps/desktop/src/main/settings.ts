@@ -37,5 +37,6 @@ function clean(raw: unknown): Settings {
     redaction: pick('redaction', ['copy', 'in-place']),
     recovery: pick('recovery', [true, false]),
     openTab: pick('openTab', ['comment', 'pages', 'protect', 'document']),
+    rememberRecent: pick('rememberRecent', [true, false]),
   };
 }

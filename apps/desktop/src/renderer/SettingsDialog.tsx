@@ -41,6 +41,12 @@ export function SettingsDialog({ settings, onChange, onClose }: { settings: Sett
       </section>
 
       <section>
+        <h3>Recent files</h3>
+        <label className="check"><input type="checkbox" checked={settings.rememberRecent} onChange={(e) => onChange({ rememberRecent: e.target.checked })} /> Remember recently opened files</label>
+        <p className="small muted">Listed under File › Open Recent, on the start screen and in the Windows jump list. Turning this off clears the list.</p>
+      </section>
+
+      <section>
         <h3>Redaction</h3>
         {choice('redaction', [
           ['copy', 'Save the redacted result as a new copy', 'Recommended. The original file stays as it is.'],

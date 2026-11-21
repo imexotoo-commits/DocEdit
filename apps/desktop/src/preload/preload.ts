@@ -29,6 +29,15 @@ const api: DocEditApi = {
   openExternal: (url) => ipcRenderer.invoke('docedit:open-external', url),
   editCommand: (cmd) => ipcRenderer.send('docedit:edit-command', cmd),
   getSettings: () => ipcRenderer.invoke('docedit:settings-get'),
+  recentList: () => ipcRenderer.invoke('docedit:recent-list'),
+  recentOpen: (path) => ipcRenderer.invoke('docedit:recent-open', path),
+  recentRemove: (path) => ipcRenderer.invoke('docedit:recent-remove', path),
+  recentClear: () => ipcRenderer.invoke('docedit:recent-clear'),
+  onRecent: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, list: unknown) => handler(Array.isArray(list) ? list : []);
+    ipcRenderer.on('docedit:recent', listener);
+    return () => { ipcRenderer.removeListener('docedit:recent', listener); };
+  },
   scannerPresent: () => ipcRenderer.invoke('docedit:scanner-present'),
   onScannerPresent: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, present: boolean) => handler(present === true);

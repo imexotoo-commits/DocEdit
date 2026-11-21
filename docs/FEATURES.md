@@ -16,7 +16,7 @@ Priority: P0 must-have for a first usable app, P1 next, P2 later.
 | Right-click menus | ✅ | P0 | Text boxes (cut, copy, paste, select all), page text (copy, highlight, underline, strike, mark for redaction), anywhere on a page (note, bookmark), page list (rotate, duplicate, blank page, save as PDF, bookmark, delete), pending changes (edit text, delete). |
 | Settings | ✅ | P0 | Theme (match Windows, light, dark), zoom and tool tab for newly opened documents, redaction into a copy or into the open document, crash recovery on or off. Saved in the profile folder. |
 | Continuous / single / two-page view | ⬜ | P1 | |
-| Tabs / recent files | ⬜ | P1 | |
+| Tabs / recent files | ✅ | P1 | Several documents in one window as tabs (Ctrl+T new, Ctrl+Tab / Ctrl+Shift+Tab to switch, Ctrl+W or middle-click to close). Opening a file uses a new tab when the current one shows a document, and switches to the tab of a file that is already open, so nothing is replaced. One running copy: a PDF opened from Explorer joins the open window as a tab. Closing the window asks once and can save every unsaved tab. Recent files (last 10) under File › Open Recent, on the start screen and in the Windows jump list; a setting turns this off and clears the list. |
 
 ## Organize pages
 | Merge several PDFs (with page selection) | ✅ | P0 | `mergePdfs` |

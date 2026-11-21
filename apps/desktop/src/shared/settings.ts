@@ -10,6 +10,8 @@ export interface Settings {
   recovery: boolean;
   /** The tool tab shown when a document opens. */
   openTab: 'comment' | 'pages' | 'protect' | 'document';
+  /** Keep a list of recently opened files (File › Open Recent, the start screen and the Windows jump list). */
+  rememberRecent: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', defaultZoom: 'fit-width', redaction: 'copy', recovery: true, openTab: 'comment' };
+export const DEFAULT_SETTINGS: Settings = { theme: 'system', defaultZoom: 'fit-width', redaction: 'copy', recovery: true, openTab: 'comment', rememberRecent: true };

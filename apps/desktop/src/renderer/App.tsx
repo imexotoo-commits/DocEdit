@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
-import type { MenuCommand, OpenedFile, RecoverySummary, SavedSignature } from '../shared/api.js';
+import type { MenuCommand, OpenedFile, RecentFile, RecoverySummary, SavedSignature } from '../shared/api.js';
 import { RecoveryDialog } from './RecoveryDialog.js';
 import { fillValues, resolveEdits, type OutlineNode, type PendingEdit, type Rect } from './edits.js';
 import { loadOutlineNodes } from './Outline.js';
@@ -90,7 +90,40 @@ function ToolButton({ icon, label, title, onClick, disabled, pressed, danger }: 
   return <button className={danger ? 'tool-btn danger' : 'tool-btn'} title={title} onClick={onClick} disabled={disabled} aria-pressed={pressed}><Icon name={icon} /><span>{label}</span></button>;
 }
 
-export function App() {
+/** What the tab shell (Tabs.tsx) can ask of the editor in one tab. */
+export interface TabHandle {
+  /** a menu command, while this tab is the active one */
+  menu(cmd: MenuCommand): void;
+  /** open a file in this (empty) tab */
+  open(file: OpenedFile): void;
+  /** Save (or Save As for a new document); resolves false when it did not save */
+  save(): Promise<boolean>;
+  /** asks about unsaved changes, then lets go of the document; false when the user keeps it */
+  close(): Promise<boolean>;
+  /** a message from outside the tab (for example, a file that could not be opened) */
+  notify(text: string): void;
+}
+
+export interface TabProps {
+  /** this tab is the one shown */
+  active: boolean;
+  /** the window's first tab, which offers crash recovery at start-up */
+  first: boolean;
+  /** a document to open as soon as the tab is created, and a message to show with it */
+  initialFile?: OpenedFile;
+  initialNotice?: string;
+  register(handle: TabHandle | null): void;
+  onInfo(info: { title: string; dirty: boolean; hasDoc: boolean; path: string | null }): void;
+  /** open a document in a new tab (this one already shows one) */
+  openElsewhere(file: OpenedFile, notice?: string): void;
+  /** when another tab already shows this file, shows that tab and returns true */
+  showIfOpen(path: string | null): boolean;
+}
+
+/** The editor for one document: everything in a tab. Window-level matters (menu, files from the system, title) go through Tabs.tsx. */
+export function App({ active, first, initialFile, initialNotice, register, onInfo, openElsewhere, showIfOpen }: TabProps) {
+  const activeRef = useRef(active);
+  activeRef.current = active;
   const [editor, setEditor] = useState<Editor | null>(null);
   const [loaded, setLoaded] = useState<LoadedSource[]>([]);
   const [selection, setSelection] = useState<Set<string>>(new Set());
@@ -175,9 +208,9 @@ export function App() {
     return label && label !== String(i + 1) ? `${i + 1} (${label})` : String(i + 1);
   }, [pages, loaded]);
 
-  useEffect(() => {
-    window.docedit.setDocumentState({ title: editor?.title ?? '', dirty });
-  }, [editor?.title, dirty]);
+  const onInfoRef = useRef(onInfo);
+  onInfoRef.current = onInfo;
+  useEffect(() => { onInfoRef.current({ title: editor?.title ?? '', dirty, hasDoc: !!editor, path: editor?.path ?? null }); }, [editor?.title, dirty, !!editor, editor?.path]);
 
   useEffect(() => { setPageInput(pages.length ? String(current + 1) : ''); }, [current, pages.length]);
 
@@ -219,7 +252,7 @@ export function App() {
     return () => { if (id) clearRecovery(id); };
   }, [editor?.recoveryId, clearRecovery]);
 
-  useEffect(() => { void window.docedit.recoveryList().then(setRecoverable, () => {}); }, []);
+  useEffect(() => { if (first) void window.docedit.recoveryList().then(setRecoverable, () => {}); }, [first]);
 
   async function recover(id: string) {
     if (!(await confirmDiscard())) return;
@@ -321,12 +354,34 @@ export function App() {
     });
   }
 
+  /** Shows a document: in this tab when it is empty, otherwise in a new tab, so nothing open is replaced. */
+  async function openDocument(file: OpenedFile, note?: string) {
+    if (showIfOpen(file.path)) return; // already open in another tab: that tab is shown
+    if (editor) { openElsewhere(file, note); return; }
+    await replaceDocument(file);
+    if (note) setNotice({ kind: 'info', text: note });
+  }
+  /** Several documents: the first here (if this tab is empty), the others in tabs of their own. */
+  async function openDocuments(files: OpenedFile[]) {
+    const [head, ...rest] = files.filter((f) => !showIfOpen(f.path));
+    if (!head) return;
+    if (editor) openElsewhere(head); else await replaceDocument(head);
+    for (const f of rest) openElsewhere(f);
+  }
+
   async function openViaDialog() {
-    if (!(await confirmDiscard())) return;
     try {
-      const files = await window.docedit.openDialog(false);
-      if (files?.[0]) await replaceDocument(files[0]);
+      const files = await window.docedit.openDialog(true);
+      if (files?.length) await openDocuments(files);
     } catch (e) { setNotice({ kind: 'error', text: errText(e) }); }
+  }
+
+  // ---------- recent files ----------
+  const [recent, setRecent] = useState<RecentFile[]>([]);
+  useEffect(() => { void window.docedit.recentList().then(setRecent, () => {}); return window.docedit.onRecent(setRecent); }, []);
+  async function openRecent(r: RecentFile) {
+    try { await openDocument(await window.docedit.recentOpen(r.path)); }
+    catch (e) { setNotice({ kind: 'error', text: `Could not open ${r.name}, so it was taken off the recent list. ${errText(e)}` }); }
   }
 
   /** Adds pages of other PDFs at a gap in the page list (n = end). */
@@ -410,11 +465,18 @@ export function App() {
     } finally { setBusy(null); }
   }
 
-  async function closeDocument() {
-    if (!editor || !(await confirmDiscard())) return;
+  /** Asks about unsaved changes, then closes the document (the tab shows the start screen). False when the user keeps it. */
+  async function closeDocument(): Promise<boolean> {
+    if (!editor) return true;
+    if (!(await confirmDiscard())) return false;
     loaded.forEach((l) => void l.doc.destroy());
     setEditor(null); setLoaded([]); setSelection(new Set()); setCurrent(0); setNotice(null);
+    return true;
   }
+  // a closed tab lets go of its documents
+  const loadedRef = useRef(loaded);
+  loadedRef.current = loaded;
+  useEffect(() => () => loadedRef.current.forEach((l) => void l.doc.destroy()), []);
 
   // ---------- page edits ----------
   function edit(fn: (pages: PageItem[]) => PageItem[]) {
@@ -692,7 +754,7 @@ export function App() {
 
   // with a markup tool active, every finished text selection is marked
   useEffect(() => {
-    if (tool !== 'highlight' && tool !== 'underline' && tool !== 'strikeout') return;
+    if (!active || (tool !== 'highlight' && tool !== 'underline' && tool !== 'strikeout')) return;
     const onUp = () => setTimeout(() => { applyMarkup(tool); }, 0);
     document.addEventListener('pointerup', onUp);
     return () => document.removeEventListener('pointerup', onUp);
@@ -930,6 +992,7 @@ export function App() {
   // Delete removes the selected pending edit; Escape returns to the select tool
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      if (!activeRef.current) return;
       const t = ev.target as HTMLElement;
       if (t.closest('input, textarea, select, dialog, .thumbs')) return;
       if ((ev.key === 'Delete' || ev.key === 'Backspace') && selectedEdit) { ev.preventDefault(); removeEdit(selectedEdit); }
@@ -1027,30 +1090,48 @@ export function App() {
     'protect': () => setOrganizing('protect'),
     'cert-sign': () => setOrganizing('cert-sign'),
     'extract': () => void extractSelected(),
-    'save-then-close-window': () => void save(false).then((ok) => window.docedit.closeWindowAfterSave(ok)),
+    'save-then-close-window': () => {}, // the tab shell saves every tab
+    'new-tab': () => {}, 'next-tab': () => {}, 'prev-tab': () => {}, // handled by the tab shell
   };
   const latest = useRef(handlers);
   latest.current = handlers;
   const latestReplace = useRef(replaceDocument);
   latestReplace.current = replaceDocument;
-  useEffect(() => window.docedit.onMenu((cmd) => {
-    const needsDoc = !['open', 'undo', 'redo', 'new-blank', 'new-images', 'new-text', 'new-office'].includes(cmd);
-    if (needsDoc && !editor && cmd !== 'save-then-close-window') return;
-    latest.current[cmd]();
-  }), [editor]);
-
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  const latestClose = useRef(closeDocument);
+  latestClose.current = closeDocument;
+  const hasEditor = useRef(false);
+  hasEditor.current = !!editor;
   useEffect(() => {
-    const off = window.docedit.onOpenFile((f) => {
-      if ('error' in f) setNotice({ kind: 'error', text: f.error });
-      else void latestReplace.current(f);
+    register({
+      menu: (cmd) => {
+        const needsDoc = !['open', 'undo', 'redo', 'new-blank', 'new-images', 'new-text', 'new-office', 'new-scan', 'settings'].includes(cmd);
+        if (needsDoc && !hasEditor.current) return;
+        latest.current[cmd]();
+      },
+      open: (f) => void latestReplace.current(f),
+      save: () => latestSave.current(false),
+      close: () => latestClose.current(),
+      notify: (text) => setNotice({ kind: 'error', text }),
     });
-    window.docedit.ready();
-    return off;
-  }, []);
+    return () => register(null);
+  }, [register]);
+
+  // a tab created for a document opens it straight away
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || !initialFile) return;
+    opened.current = true;
+    void latestReplace.current(initialFile).then(() => { if (initialNotice) setNotice({ kind: 'info', text: initialNotice }); });
+  }, [initialFile, initialNotice]);
+
+  // the view is laid out again when a tab comes back (the window may have been resized meanwhile)
+  useEffect(() => { if (active) refit(); }, [active, refit]);
 
   // Ctrl+wheel zooms the document view.
   useEffect(() => {
-    const onWheel = (e: WheelEvent) => { if (e.ctrlKey && editor) { e.preventDefault(); stepZoom(e.deltaY < 0 ? 1 : -1); } };
+    const onWheel = (e: WheelEvent) => { if (e.ctrlKey && editor && activeRef.current) { e.preventDefault(); stepZoom(e.deltaY < 0 ? 1 : -1); } };
     window.addEventListener('wheel', onWheel, { passive: false });
     return () => window.removeEventListener('wheel', onWheel);
   }, [editor]);
@@ -1058,10 +1139,9 @@ export function App() {
   // Dropping a PDF anywhere outside the page list opens it.
   async function dropOnWindow(e: DragEvent) {
     e.preventDefault();
-    if (!e.dataTransfer.files.length || !(await confirmDiscard())) return;
+    if (!e.dataTransfer.files.length) return;
     try {
-      const files = await readDropped([...e.dataTransfer.files]);
-      if (files[0]) await replaceDocument(files[0]);
+      await openDocuments(await readDropped([...e.dataTransfer.files]));
     } catch (err) { setNotice({ kind: 'error', text: errText(err) }); }
   }
 
@@ -1268,6 +1348,20 @@ export function App() {
               <button onClick={() => setCreating('office')}>From Word/Office</button>
               {scannerPresent && <button onClick={() => setScanning(true)}>From scanner</button>}
             </div>
+            {recent.length > 0 && (
+              <section className="recent" aria-label="Recent files">
+                <div className="recent-head"><h2>Recent</h2><button className="link" onClick={() => void window.docedit.recentClear()}>Clear</button></div>
+                <ul>
+                  {recent.slice(0, 8).map((r) => (
+                    <li key={r.path}>
+                      <button className="recent-item" title={r.path} onClick={() => void openRecent(r)}>
+                        <span className="recent-name">{r.name}</span><span className="recent-folder">{r.folder}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
         </main>
       )}
@@ -1281,9 +1375,8 @@ export function App() {
       {creating && (
         <NewDocumentDialog kind={creating} onClose={() => setCreating(null)}
           onCreated={async (file, note) => {
-            if (!(await confirmDiscard())) return;
             setCreating(null);
-            void replaceDocument(file).then(() => setNotice(note ? { kind: 'info', text: note } : { kind: 'info', text: 'New document created. Save it to keep it.' }));
+            await openDocument(file, note ?? 'New document created. Save it to keep it.');
           }} />
       )}
       {organizing === 'crop' && editor && (
@@ -1306,7 +1399,7 @@ export function App() {
       {redacting && editor && (
         <RedactDialog inPlace={settings.redaction === 'in-place'} markCount={marks.length} pageCount={new Set(marks.map((m) => m.pageId)).size}
           run={runRedaction} onClose={() => setRedacting(false)}
-          onOpenResult={(path) => { setRedacting(false); void confirmDiscard().then((ok) => { if (ok) void window.docedit.openWritten(path).then((f) => replaceDocument(f), (e) => setNotice({ kind: 'error', text: errText(e) })); }); }} />
+          onOpenResult={(path) => { setRedacting(false); void window.docedit.openWritten(path).then((f) => openDocument(f), (e) => setNotice({ kind: 'error', text: errText(e) })); }} />
       )}
       {askSignature && (
         <SignatureDialog kind={askSignature} onClose={() => setAskSignature(null)} onChosen={(s) => { const k = askSignature; if (k === 'initials') setInitials(s); else setSignature(s); setAskSignature(null); reloadSigs(); setTool(k); setNotice({ kind: 'info', text: `Click or drag on a page to place your ${k}. Press Escape to cancel.` }); }} />
@@ -1314,7 +1407,7 @@ export function App() {
       {prompt && <TextPrompt {...prompt} onClose={() => setPrompt(null)} />}
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
       {exporting && editor && <ExportDialog protectedDoc={!!editor.protection} run={runExport} onClose={() => setExporting(false)} />}
-      {scanning && <ScanDialog onClose={() => setScanning(false)} onCreated={(file) => { void confirmDiscard().then((ok) => { setScanning(false); if (ok) void replaceDocument(file).then(() => setNotice({ kind: 'info', text: 'Scanned document created. Save it to keep it.' })); }); }} />}
+      {scanning && <ScanDialog onClose={() => setScanning(false)} onCreated={(file) => { setScanning(false); void openDocument(file, 'Scanned document created. Save it to keep it.'); }} />}
       {showSettings && <SettingsDialog settings={settings} onChange={changeSettings} onClose={() => setShowSettings(false)} />}
       {organizing === 'cert-sign' && editor && <CertSignDialog warnings={signWarnings()} run={runCertSign} onClose={() => setOrganizing(null)} />}
       {organizing === 'protect' && editor && (

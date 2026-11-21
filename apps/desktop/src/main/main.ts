@@ -21,17 +21,16 @@ import { describeCertificate, signerFromPkcs12, TrustStore } from './certificate
 import { SignatureStore } from './signatures.js';
 import type { CreateRequest, RecoverySnapshot, SaveSlot, SplitRequest, SplitResult } from '../shared/api.js';
 import { RecoveryStore } from './recovery.js';
+import { RecentStore, type RecentFile } from './recent.js';
 import type { PrintRequest } from '../shared/api.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const windowState = new WeakMap<BrowserWindow, {
   dirty: boolean; forceClose: boolean; asking?: boolean;
-  /** the window shows a document (reported by the page) */
-  hasDoc?: boolean;
+  /** how many tabs have unsaved changes */
+  unsaved?: number;
   /** the page has said it is ready to receive files */
   ready?: boolean;
-  /** a file is on its way to this window, so another file must not take it */
-  claimed?: boolean;
   /** files waiting for the page to be ready */
   queue?: string[];
 }>();
@@ -43,9 +42,15 @@ const written = new Set<string>();
  */
 const known = new Set<string>();
 const keyOf = (p: string) => resolve(p).toLowerCase();
-function remember<T extends { path: string | null }>(file: T): T { if (file.path) known.add(keyOf(file.path)); return file; }
+function remember<T extends { path: string | null }>(file: T): T { if (file.path) noteDocument(file.path); return file; }
+/** A document this session opened or saved: it may be saved in place, and it goes on the recent list (if kept). */
+function noteDocument(path: string) {
+  known.add(keyOf(path));
+  if (settings?.get().rememberRecent) recent?.add(path);
+}
 
 let recovery: RecoveryStore;
+let recent: RecentStore;
 let signatures: SignatureStore;
 let trust: TrustStore;
 let settings: SettingsStore;
@@ -75,8 +80,9 @@ function createWindow(): BrowserWindow {
     if (st.asking) return; // already asking (a second click on the close button)
     st.asking = true;
     void ask(win, {
-      title: 'Save changes before closing?', message: 'Your changes will be lost if you close without saving.', kind: 'warning',
-      confirm: { label: 'Save' }, extra: { label: "Don't save", danger: true },
+      title: 'Save changes before closing?', kind: 'warning',
+      message: (st.unsaved ?? 1) > 1 ? `${st.unsaved} open documents have unsaved changes. They will be lost if you close without saving.` : 'Your changes will be lost if you close without saving.',
+      confirm: { label: (st.unsaved ?? 1) > 1 ? 'Save all' : 'Save' }, extra: { label: "Don't save", danger: true },
     }).then((a) => {
       st.asking = false;
       if (win.isDestroyed()) return;
@@ -123,6 +129,28 @@ async function refreshScanners(force = false) {
   } finally { scannerChecking = false; }
 }
 
+/** File › Open Recent: the recent list, newest first, then Clear. */
+function recentMenu(): MenuItemConstructorOptions[] {
+  const list = recent?.list() ?? [];
+  if (!list.length) return [{ label: 'No recent files', enabled: false }];
+  return [
+    ...list.map((r, i): MenuItemConstructorOptions => ({
+      label: `${i < 9 ? `&${i + 1} ` : ''}${r.name.replace(/&/g, '&&')}`, sublabel: r.folder, toolTip: r.path,
+      click: () => openInWindow(r.path, BrowserWindow.getFocusedWindow()),
+    })),
+    { type: 'separator' },
+    { label: 'Clear Recent Files', click: () => recent.clear() },
+  ];
+}
+
+/** After any change to the recent list: the menu, the Windows jump list and every window's start screen. */
+function recentChanged(list: RecentFile[]) {
+  buildMenu();
+  app.clearRecentDocuments();
+  for (const r of [...list].reverse()) app.addRecentDocument(r.path);
+  for (const w of BrowserWindow.getAllWindows()) w.webContents.send('docedit:recent', list);
+}
+
 function buildMenu() {
   const isMac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
@@ -141,6 +169,8 @@ function buildMenu() {
           ],
         },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: send('open') },
+        { label: 'Open Recent', submenu: recentMenu() },
+        { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: send('new-tab') },
         { label: 'Insert Pages from File…', accelerator: 'CmdOrCtrl+I', click: send('insert-file') },
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: send('save') },
@@ -151,7 +181,7 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: send('settings') },
         { type: 'separator' },
-        { label: 'Close Document', accelerator: 'CmdOrCtrl+W', click: send('close-document') },
+        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: send('close-document') },
         isMac ? { role: 'close' } : { role: 'quit', label: 'Exit' },
       ],
     },
@@ -205,6 +235,9 @@ function buildMenu() {
         { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: send('zoom-reset') },
         { label: 'Fit Width', accelerator: 'CmdOrCtrl+1', click: send('fit-width') },
         { label: 'Fit Page', accelerator: 'CmdOrCtrl+2', click: send('fit-page') },
+        { type: 'separator' },
+        { label: 'Next Tab', accelerator: 'Ctrl+Tab', click: send('next-tab') },
+        { label: 'Previous Tab', accelerator: 'Ctrl+Shift+Tab', click: send('prev-tab') },
         ...(app.isPackaged ? [] : [{ type: 'separator' as const }, { role: 'toggleDevTools' as const }, { role: 'reload' as const }]),
       ],
     },
@@ -292,7 +325,7 @@ function registerIpc() {
       const plain = await layoutBytes(req.sources, req.slots, (req.edits ?? []) as DocEdit[]);
       const bytes = req.protect ? await core.protectPdf(plain, req.protect as ProtectOptions) : plain;
       await writeFileSafely(target, bytes);
-      known.add(keyOf(target));
+      noteDocument(target);
       return { ok: true, file: { path: target, name: basename(target), bytes }, editBytes: plain };
     } catch (err) {
       const message = err instanceof DocEditError || err instanceof Error ? err.message : String(err);
@@ -300,11 +333,11 @@ function registerIpc() {
     }
   });
 
-  ipcMain.on('docedit:document-state', (e, state: { title: string; dirty: boolean }) => {
+  ipcMain.on('docedit:document-state', (e, state: { title: string; dirty: boolean; unsaved?: number }) => {
     const win = BrowserWindow.fromWebContents(e.sender);
     if (!win) return;
     const st = windowState.get(win);
-    if (st) { st.dirty = !!state.dirty; st.hasDoc = !!state.title; if (st.hasDoc) st.claimed = false; }
+    if (st) { st.unsaved = Math.max(Number(state.unsaved) || 0, state.dirty ? 1 : 0); st.dirty = st.unsaved > 0; }
     win.setTitle(`${state.dirty ? '• ' : ''}${state.title ? state.title + ' — ' : ''}Oakqueill PDF Editor`);
     win.setDocumentEdited(!!state.dirty);
   });
@@ -342,7 +375,20 @@ function registerIpc() {
   ipcMain.handle('docedit:scan', (_e, req) => scan(req));
   ipcMain.handle('docedit:scan-clear', () => clearScans());
   ipcMain.handle('docedit:save-export', (e, req) => saveExport(BrowserWindow.fromWebContents(e.sender), req));
-  ipcMain.handle('docedit:settings-set', (_e, patch: unknown) => settings.set(patch));
+  ipcMain.handle('docedit:settings-set', (_e, patch: unknown) => {
+    const next = settings.set(patch);
+    if (!next.rememberRecent) recent.clear(); // turning it off forgets the list
+    return next;
+  });
+  // the recent list: opened only by a path on it, so the page cannot use it to read other files
+  ipcMain.handle('docedit:recent-list', () => (settings.get().rememberRecent ? recent.list() : []));
+  ipcMain.handle('docedit:recent-open', async (_e, path: unknown) => {
+    if (typeof path !== 'string' || !recent.has(path)) throw new Error('That file is not on the recent list.');
+    try { return remember(await readPdfFile(path)); }
+    catch (err) { recent.remove(path); throw err; } // gone or unreadable: off the list
+  });
+  ipcMain.handle('docedit:recent-remove', (_e, path: unknown) => { if (typeof path === 'string') recent.remove(path); });
+  ipcMain.handle('docedit:recent-clear', () => recent.clear());
 
   ipcMain.on('docedit:edit-command', (e, cmd: unknown) => {
     if (cmd === 'cut' || cmd === 'copy' || cmd === 'paste' || cmd === 'selectAll') e.sender[cmd]();
@@ -385,7 +431,7 @@ function registerIpc() {
       // copies of a protected document stay protected
       await writeFileSafely(target, req.protect ? await core.protectPdf(req.bytes, req.protect) : req.bytes);
       written.add(resolve(target));
-      known.add(keyOf(target));
+      noteDocument(target);
       return { ok: true, path: target };
     }
     catch (err) { return { ok: false, cancelled: false, message: err instanceof Error ? err.message : String(err) }; }
@@ -456,7 +502,7 @@ function registerIpc() {
     const arg = firstReady ? process.argv.slice(app.isPackaged ? 1 : 2).find((a) => !a.startsWith('-') && a.toLowerCase().endsWith('.pdf')) : undefined;
     firstReady = false;
     st.ready = true;
-    if (arg) { st.claimed = true; (st.queue ??= []).unshift(arg); }
+    if (arg) (st.queue ??= []).unshift(arg);
     flushWindow(win);
   });
 
@@ -491,9 +537,10 @@ function carryOverOldAppData() {
 }
 
 
-// PDFs handed to the app by the system (macOS Finder "Open With", double-click, dropping on the Dock icon) arrive as
-// 'open-file' events, possibly before the app or a window exists. A file never replaces a document that is open (that could
-// discard unsaved changes): it goes to a window that has no document, or to a new window (see openRouting.ts).
+// PDFs handed to the app by the system arrive as 'open-file' events (macOS Finder "Open With", double-click, Dock drop) or,
+// on Windows, as the command line of a second start (Explorer double-click, "Open with"), passed on to this instance.
+// They go to an open window, where they open in a new tab when the current one shows a document (see openRouting.ts),
+// so a document with unsaved changes is never replaced.
 const startupOpens: string[] = [];
 
 function flushWindow(win: BrowserWindow) {
@@ -504,20 +551,21 @@ function flushWindow(win: BrowserWindow) {
     readPdfFile(resolve(path)).then(
       (file) => { if (!target.isDestroyed()) target.send('docedit:open-file', remember(file)); },
       (err: unknown) => {
-        st.claimed = false; // nothing will show up, so the window is free again
         if (!target.isDestroyed()) target.send('docedit:open-file', { error: err instanceof Error ? err.message : String(err) });
       },
     );
   }
 }
 
-function openInWindow(path: string) {
-  const slots = BrowserWindow.getAllWindows().flatMap((w) => { const st = windowState.get(w); return st && !w.isDestroyed() ? [{ id: w.id, hasDoc: !!st.hasDoc, claimed: !!st.claimed }] : []; });
+function openInWindow(path: string, preferred: BrowserWindow | null = null) {
+  const focused = preferred ?? BrowserWindow.getFocusedWindow();
+  const slots = BrowserWindow.getAllWindows().flatMap((w) => (windowState.has(w) && !w.isDestroyed() ? [{ id: w.id, focused: w === focused }] : []));
   const id = pickWindowForOpen(slots);
   const win = (id !== null ? BrowserWindow.fromId(id) : null) ?? createWindow();
   const st = windowState.get(win)!;
-  st.claimed = true;
   (st.queue ??= []).push(path);
+  if (win.isMinimized()) win.restore();
+  win.focus();
   flushWindow(win); // a no-op until the page is ready
 }
 
@@ -536,12 +584,26 @@ app.setPath('userData', join(app.getPath('appData'), 'Oakqueill'));
 // Tests run against a throw-away profile folder (ignored in packaged builds).
 if (!app.isPackaged && process.env.DOCEDIT_TEST_USER_DATA) app.setPath('userData', process.env.DOCEDIT_TEST_USER_DATA);
 
+// One running copy: a second start (a PDF double-clicked in Explorer, "Open with", the jump list) hands its files to this
+// one, where they open as tabs, instead of starting another app. Asked after the profile folder is set (the lock is per profile).
+if (!app.requestSingleInstanceLock()) app.quit();
+app.on('second-instance', (_e, argv) => {
+  if (!app.isReady()) return;
+  const files = argv.slice(1).filter((a) => !a.startsWith('-') && a.toLowerCase().endsWith('.pdf'));
+  if (files.length) { for (const f of files) openInWindow(f); return; }
+  const win = BrowserWindow.getAllWindows()[0] ?? createWindow();
+  if (win.isMinimized()) win.restore();
+  win.focus();
+});
+
 app.on('will-quit', () => { clearScans(); stopCoreWorker(); void retryLeftovers(); });
 
 app.whenReady().then(() => {
   carryOverOldAppData();
   settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
   recovery = new RecoveryStore(join(app.getPath('userData'), 'recovery'));
+  recent = new RecentStore(join(app.getPath('userData'), 'recent.json'));
+  recent.onChange = recentChanged;
   signatures = new SignatureStore(join(app.getPath('userData'), 'signatures'));
   trust = new TrustStore(join(app.getPath('userData'), 'trusted-certificates'));
   // The app needs no camera, microphone, notifications, etc.
@@ -553,7 +615,8 @@ app.whenReady().then(() => {
   createWindow();
   for (const path of startupOpens.splice(0)) openInWindow(path);
   setTimeout(() => void refreshScanners(true), 1500);
-  app.on('browser-window-focus', () => void refreshScanners()); // the first goes to the window just made, the rest to their own
+  app.on('browser-window-focus', () => void refreshScanners());
+  if (settings.get().rememberRecent) recentChanged(recent.list()); else app.clearRecentDocuments();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
