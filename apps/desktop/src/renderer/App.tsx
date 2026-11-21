@@ -41,7 +41,6 @@ import { ContextMenu, type MenuItem } from './ContextMenu.js';
 import { SettingsDialog } from './SettingsDialog.js';
 import { ExportDialog } from './ExportDialog.js';
 import { ScanDialog } from './ScanDialog.js';
-import { RemarkableDialog } from './RemarkableDialog.js';
 import { exportDocument, type ExportKind } from './export/run.js';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/settings.js';
 import logo from './assets/logo.png';
@@ -106,8 +105,9 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [remarkable, setRemarkable] = useState(false);
-  const chooseRemarkableFolder = async () => { const s = await window.docedit.remarkableChooseFolder(); if (s) setSettingsState(s); };
+  // scanning is offered only when Windows sees a scanner
+  const [scannerPresent, setScannerPresent] = useState(false);
+  useEffect(() => { void window.docedit.scannerPresent().then(setScannerPresent, () => {}); return window.docedit.onScannerPresent(setScannerPresent); }, []);
   useEffect(() => { void window.docedit.getSettings().then(setSettingsState, () => {}); return window.docedit.onSettings(setSettingsState); }, []);
   const changeSettings = (patch: Partial<Settings>) => { setSettingsState((s) => ({ ...s, ...patch })); void window.docedit.setSettings(patch).then(setSettingsState); };
   const [printing, setPrinting] = useState(false);
@@ -1012,7 +1012,6 @@ export function App() {
     settings: () => setShowSettings(true),
     export: () => { if (editor) setExporting(true); },
     'new-scan': () => setScanning(true),
-    remarkable: () => setRemarkable(true),
     'fit-width': () => setZoom({ mode: 'fit-width', scale: computeFit('fit-width') }),
     'fit-page': () => setZoom({ mode: 'fit-page', scale: computeFit('fit-page') }),
     'rotate-left': () => edit((ps) => rotate(ps, selection, -90)),
@@ -1267,8 +1266,7 @@ export function App() {
               <button onClick={() => setCreating('images')}>From images</button>
               <button onClick={() => setCreating('text')}>From text</button>
               <button onClick={() => setCreating('office')}>From Word/Office</button>
-              <button onClick={() => setScanning(true)}>From scanner</button>
-              <button onClick={() => setRemarkable(true)}>From reMarkable</button>
+              {scannerPresent && <button onClick={() => setScanning(true)}>From scanner</button>}
             </div>
           </div>
         </main>
@@ -1317,9 +1315,7 @@ export function App() {
       {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
       {exporting && editor && <ExportDialog protectedDoc={!!editor.protection} run={runExport} onClose={() => setExporting(false)} />}
       {scanning && <ScanDialog onClose={() => setScanning(false)} onCreated={(file) => { void confirmDiscard().then((ok) => { setScanning(false); if (ok) void replaceDocument(file).then(() => setNotice({ kind: 'info', text: 'Scanned document created. Save it to keep it.' })); }); }} />}
-      {remarkable && <RemarkableDialog folder={settings.remarkableFolder} onChooseFolder={chooseRemarkableFolder} onClose={() => setRemarkable(false)}
-        onOpen={(file) => { void confirmDiscard().then((ok) => { if (!ok) return; setRemarkable(false); void replaceDocument(file); }); }} />}
-      {showSettings && <SettingsDialog onChooseRemarkable={chooseRemarkableFolder} settings={settings} onChange={changeSettings} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsDialog settings={settings} onChange={changeSettings} onClose={() => setShowSettings(false)} />}
       {organizing === 'cert-sign' && editor && <CertSignDialog warnings={signWarnings()} run={runCertSign} onClose={() => setOrganizing(null)} />}
       {organizing === 'protect' && editor && (
         <ProtectDialog current={(editor.protection ?? null) as never} onClose={() => setOrganizing(null)}

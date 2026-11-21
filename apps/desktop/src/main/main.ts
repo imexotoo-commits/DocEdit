@@ -6,7 +6,6 @@ import { ask, registerPrompts } from './prompt.js';
 import { SettingsStore } from './settings.js';
 import { clearScans, listScanners, scan } from './scan.js';
 import { saveExport } from './exportfiles.js';
-import { forgetListings, listExports, openExport } from './remarkable.js';
 import { retryLeftovers } from './convert.js';
 import { cpSync, existsSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -101,6 +100,29 @@ function send(cmd: MenuCommand) {
   return () => BrowserWindow.getFocusedWindow()?.webContents.send('docedit:menu', cmd);
 }
 
+/**
+ * Whether Windows sees a scanner (WIA), so scanning is offered only when there is one. Checked in the background a
+ * moment after the first window appears (listing takes about half a second and must not slow the start), and again
+ * when the app comes back to the front, at most every 30 seconds, so a scanner switched on later shows up.
+ */
+let scannerPresent = false;
+let scannerChecked = 0;
+let scannerChecking = false;
+async function refreshScanners(force = false) {
+  if (scannerChecking || (!force && Date.now() - scannerChecked < 30_000)) return;
+  scannerChecking = true;
+  try {
+    const res = await listScanners();
+    const present = res.ok && res.devices.length > 0;
+    scannerChecked = Date.now();
+    if (present === scannerPresent) return;
+    scannerPresent = present;
+    const item = Menu.getApplicationMenu()?.getMenuItemById('new-scan');
+    if (item) item.visible = present;
+    for (const w of BrowserWindow.getAllWindows()) w.webContents.send('docedit:scanner-present', present);
+  } finally { scannerChecking = false; }
+}
+
 function buildMenu() {
   const isMac = process.platform === 'darwin';
   const template: MenuItemConstructorOptions[] = [
@@ -115,11 +137,10 @@ function buildMenu() {
             { label: 'From Images…', click: send('new-images') },
             { label: 'From Text…', click: send('new-text') },
             { label: 'From Office Document…', click: send('new-office') },
-            { label: 'From Scanner…', click: send('new-scan') },
+            { id: 'new-scan', label: 'From Scanner…', click: send('new-scan'), visible: scannerPresent },
           ],
         },
         { label: 'Open…', accelerator: 'CmdOrCtrl+O', click: send('open') },
-        { label: 'Open from reMarkable…', click: send('remarkable') },
         { label: 'Insert Pages from File…', accelerator: 'CmdOrCtrl+I', click: send('insert-file') },
         { type: 'separator' },
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: send('save') },
@@ -316,17 +337,7 @@ function registerIpc() {
   });
 
   ipcMain.handle('docedit:settings-get', () => settings.get());
-  ipcMain.handle('docedit:remarkable-choose', async (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender);
-    const opts: Electron.OpenDialogOptions = { title: 'Choose the folder you save reMarkable exports to', properties: ['openDirectory', 'createDirectory'], defaultPath: settings.get().remarkableFolder ?? undefined };
-    const testDir = !app.isPackaged ? process.env.DOCEDIT_TEST_SAVE_DIR : undefined; // test hook, unpackaged only
-    const res = testDir ? { canceled: false, filePaths: [testDir] } : win ? await dialog.showOpenDialog(win, opts) : await dialog.showOpenDialog(opts);
-    if (res.canceled || !res.filePaths[0]) return null;
-    forgetListings(); // ids from the old folder stop working
-    return settings.setFolder(res.filePaths[0]);
-  });
-  ipcMain.handle('docedit:remarkable-list', (e) => listExports(e.sender.id, settings.get().remarkableFolder));
-  ipcMain.handle('docedit:remarkable-open', (e, id: unknown) => openExport(e.sender.id, settings.get().remarkableFolder, id));
+  ipcMain.handle('docedit:scanner-present', () => scannerPresent);
   ipcMain.handle('docedit:scan-devices', () => listScanners());
   ipcMain.handle('docedit:scan', (_e, req) => scan(req));
   ipcMain.handle('docedit:scan-clear', () => clearScans());
@@ -530,7 +541,6 @@ app.on('will-quit', () => { clearScans(); stopCoreWorker(); void retryLeftovers(
 app.whenReady().then(() => {
   carryOverOldAppData();
   settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
-  settings.onFolderChange = forgetListings;
   recovery = new RecoveryStore(join(app.getPath('userData'), 'recovery'));
   signatures = new SignatureStore(join(app.getPath('userData'), 'signatures'));
   trust = new TrustStore(join(app.getPath('userData'), 'trusted-certificates'));
@@ -541,7 +551,9 @@ app.whenReady().then(() => {
   registerCoreWorker(here);
   buildMenu();
   createWindow();
-  for (const path of startupOpens.splice(0)) openInWindow(path); // the first goes to the window just made, the rest to their own
+  for (const path of startupOpens.splice(0)) openInWindow(path);
+  setTimeout(() => void refreshScanners(true), 1500);
+  app.on('browser-window-focus', () => void refreshScanners()); // the first goes to the window just made, the rest to their own
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 

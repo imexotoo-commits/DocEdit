@@ -29,9 +29,12 @@ const api: DocEditApi = {
   openExternal: (url) => ipcRenderer.invoke('docedit:open-external', url),
   editCommand: (cmd) => ipcRenderer.send('docedit:edit-command', cmd),
   getSettings: () => ipcRenderer.invoke('docedit:settings-get'),
-  remarkableChooseFolder: () => ipcRenderer.invoke('docedit:remarkable-choose'),
-  remarkableList: () => ipcRenderer.invoke('docedit:remarkable-list'),
-  remarkableOpen: (id) => ipcRenderer.invoke('docedit:remarkable-open', id),
+  scannerPresent: () => ipcRenderer.invoke('docedit:scanner-present'),
+  onScannerPresent: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, present: boolean) => handler(present === true);
+    ipcRenderer.on('docedit:scanner-present', listener);
+    return () => { ipcRenderer.removeListener('docedit:scanner-present', listener); };
+  },
   scanDevices: () => ipcRenderer.invoke('docedit:scan-devices'),
   scan: (req) => ipcRenderer.invoke('docedit:scan', req),
   scanClear: () => ipcRenderer.invoke('docedit:scan-clear'),

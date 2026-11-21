@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import type { Settings } from '../shared/settings.js';
 
 /** App preferences. Every change applies and is saved at once. */
-export function SettingsDialog({ settings, onChange, onChooseRemarkable, onClose }: { settings: Settings; onChange(patch: Partial<Settings>): void; onChooseRemarkable(): Promise<void>; onClose(): void }) {
+export function SettingsDialog({ settings, onChange, onClose }: { settings: Settings; onChange(patch: Partial<Settings>): void; onClose(): void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { ref.current?.showModal(); }, []);
   const choice = <K extends keyof Settings>(k: K, options: Array<[Settings[K], string, ReactNode?]>) => (
@@ -49,16 +49,6 @@ export function SettingsDialog({ settings, onChange, onChooseRemarkable, onClose
         {settings.redaction === 'in-place' && (
           <p className="setting-warning" role="note">Redactions then replace the pages you are viewing and can’t be undone. The file on disk keeps the content until you save over it.</p>
         )}
-      </section>
-
-      <section>
-        <h3>reMarkable</h3>
-        <p className="small muted">The folder you save PDFs exported from reMarkable to. They are listed under File › Open from reMarkable.</p>
-        <div className="row">
-          <span className="rm-folder small">{settings.remarkableFolder ?? 'No folder chosen'}</span>
-          <button onClick={() => void onChooseRemarkable()}>{settings.remarkableFolder ? 'Change…' : 'Choose folder…'}</button>
-          {settings.remarkableFolder && <button onClick={() => onChange({ remarkableFolder: null })}>Clear</button>}
-        </div>
       </section>
 
       <section>

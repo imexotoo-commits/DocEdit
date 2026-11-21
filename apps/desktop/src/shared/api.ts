@@ -75,7 +75,7 @@ export type MenuCommand =
   | 'zoom-in' | 'zoom-out' | 'zoom-reset' | 'fit-width' | 'fit-page'
   | 'rotate-left' | 'rotate-right' | 'delete-pages' | 'duplicate-pages' | 'insert-blank' | 'crop' | 'extract' | 'split'
   | 'properties' | 'furniture' | 'sanitize' | 'protect' | 'cert-sign'
-  | 'save-then-close-window' | 'settings' | 'export' | 'new-scan' | 'remarkable';
+  | 'save-then-close-window' | 'settings' | 'export' | 'new-scan';
 
 export interface DocEditApi {
   /** Shows the native open dialog. Resolves null when cancelled. */
@@ -140,12 +140,10 @@ export interface DocEditApi {
   recoverySave(snap: RecoverySnapshot): Promise<void>;
   recoveryClear(id: string): Promise<void>;
   getSettings(): Promise<Settings>;
-  /** Choose the folder reMarkable exports are saved to (folder dialog); resolves with the new settings, or null when cancelled. */
-  remarkableChooseFolder(): Promise<Settings | null>;
-  /** PDFs in the reMarkable folder, newest first. */
-  remarkableList(): Promise<{ ok: true; files: Array<{ id: string; name: string; folder: string; modified: number; size: number }> } | { ok: false; message: string }>;
-  /** Open a PDF from the latest reMarkable listing, by its id (only files inside the folder). */
-  remarkableOpen(id: string): Promise<OpenedFile>;
+  /** Whether Windows sees a scanner (checked in the background; false until the first check has finished). */
+  scannerPresent(): Promise<boolean>;
+  /** Called when a scanner appears or disappears. */
+  onScannerPresent(handler: (present: boolean) => void): () => void;
   /** Scanners Windows can scan from (WIA). */
   scanDevices(): Promise<{ ok: true; devices: ScanDevice[] } | { ok: false; message: string }>;
   /** Scan with the chosen scanner; resolves with the page images (temporary files). */
