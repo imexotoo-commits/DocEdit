@@ -25,7 +25,7 @@ npm install
 npm run build -w @docedit/core
 npm run dist -w @docedit/desktop
 ```
-Produces `apps/desktop/release/Oakqueill-Setup-<version>.exe` (installer: per-user, choose folder, Start menu and desktop shortcuts, offers Oakqueill for opening PDFs) and `Oakqueill-Portable-<version>.exe` (runs without installing). The executables built locally are not code-signed, so Windows SmartScreen warns on first run. Release builds are made and signed on GitHub through SignPath; see [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md).
+Produces `apps/desktop/release/Oakqueill-Setup-<version>.exe` (installer: per-user, choose folder, Start menu and desktop shortcuts, offers Oakqueill for opening PDFs) and `Oakqueill-Portable-<version>.exe` (runs without installing; it unpacks itself each time it starts, which takes several seconds and shows an "Unpacking…" splash from `apps/desktop/build/portable-splash.bmp`). The executables built locally are not code-signed, so Windows SmartScreen warns on first run. Release builds are made and signed on GitHub through SignPath; see [docs/CODE_SIGNING.md](docs/CODE_SIGNING.md).
 Settings, saved signatures and crash-recovery data live in `%APPDATA%\Oakqueill`.
 
 ## Build the Chrome and Edge viewer extension

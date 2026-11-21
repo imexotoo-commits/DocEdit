@@ -92,7 +92,8 @@
       "uninstallDisplayName": "Oakqueill PDF Editor"
     },
     "portable": {
-      "artifactName": "Oakqueill-Portable-${version}.${ext}"
+      "artifactName": "Oakqueill-Portable-${version}.${ext}",
+      "splashImage": "build/portable-splash.bmp"
     },
     "executableName": "Oakqueill",
     "electronFuses": {
