@@ -18,5 +18,5 @@ export class PageRangeError extends DocEditError {
   constructor(message: string) { super(message, 'PAGE_RANGE'); }
 }
 export class NotImplementedError extends DocEditError {
-  constructor(feature: string) { super(`${feature} is designed but not implemented yet (see docs/ROADMAP.md).`, 'NOT_IMPLEMENTED'); }
+  constructor(feature: string) { super(`${feature} is not implemented yet.`, 'NOT_IMPLEMENTED'); }
 }

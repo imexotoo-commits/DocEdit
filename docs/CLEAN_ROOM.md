@@ -25,7 +25,7 @@ This project builds its own PDF reader/editor from public standards and public l
 - Add a line to `docs/PROVENANCE.md` for every non-trivial algorithm or external document you rely on (what, where from, licence).
 - Before a pull request: re-read this file; confirm nothing above was violated; tick the box in the PR template (`.github/pull_request_template.md`).
 - If you are unsure whether something is allowed, do not use it; ask the project owner.
-- Reviewers (including Codex) check the PR against this file as well as for correctness.
+- Reviewers (people and AI review tools) check the PR against this file as well as for correctness.
 
 ## A note on how this foundation was written
 The foundation (everything in this repository at the first commit) was written by an AI coding assistant (Claude) working from the PDF standard, the public APIs of pdf-lib and pdf.js, and general feature-level knowledge of what PDF editors do. No Adobe materials were consulted or available to it. Like any general-purpose assistant it has seen public descriptions of commercial products during training, which is why the rules above are about process and provenance, and why `PROVENANCE.md` exists: independent reviewers can check that the code stands on the allowed sources.

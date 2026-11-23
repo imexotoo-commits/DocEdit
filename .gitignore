@@ -9,3 +9,6 @@ apps/ios/Oakqueill/Web/
 apps/ios/build/
 *.xcuserstate
 xcuserdata/
+apps/browser/dist-*/
+apps/browser/safari/
+apps/browser/release/

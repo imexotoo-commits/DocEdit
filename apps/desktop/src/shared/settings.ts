@@ -10,8 +10,8 @@ export interface Settings {
   recovery: boolean;
   /** The tool tab shown when a document opens. */
   openTab: 'comment' | 'pages' | 'protect' | 'document';
-  /** Where the user saves PDFs exported from reMarkable; null until chosen. */
-  remarkableFolder: string | null;
+  /** Keep a list of recently opened files (File › Open Recent, the start screen and the Windows jump list). */
+  rememberRecent: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'system', defaultZoom: 'fit-width', redaction: 'copy', recovery: true, openTab: 'comment', remarkableFolder: null };
+export const DEFAULT_SETTINGS: Settings = { theme: 'system', defaultZoom: 'fit-width', redaction: 'copy', recovery: true, openTab: 'comment', rememberRecent: true };

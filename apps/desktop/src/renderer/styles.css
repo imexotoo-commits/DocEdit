@@ -324,13 +324,29 @@ body.prompt-window #root { height: auto; }
 .scan-page figcaption { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .scan-page figcaption button { padding: 1px 6px; font-size: 12px; }
 
-/* from reMarkable */
-.rm-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.rm-folder { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
-.rm-bar input[type="search"] { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; width: 180px; }
-.rm-list { list-style: none; margin: 0; padding: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 56vh; overflow: auto; }
-.rm-item { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; padding: 10px 6px; border: 1px solid var(--border); border-radius: 10px; text-align: center; }
-.rm-item:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
-.rm-thumb { width: 110px; height: 140px; display: grid; place-items: center; background: var(--panel-2); border-radius: 4px; }
-.rm-thumb img { max-width: 110px; max-height: 140px; box-shadow: var(--shadow); }
-.rm-name { font-weight: 600; overflow-wrap: anywhere; }
+/* document tabs: a darker strip over the app bar; the active tab joins the bar below it */
+.tabbed { display: flex; flex-direction: column; height: 100%; }
+.tab-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tab-pane[hidden] { display: none; }
+.tab-pane > .app { flex: 1; min-height: 0; height: auto; }
+.tabbar { display: flex; align-items: flex-end; gap: 2px; height: 34px; padding: 5px 8px 0; flex: none; overflow: hidden; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), var(--bar); }
+.doc-tab { display: flex; align-items: center; gap: 6px; flex: 0 1 220px; min-width: 80px; height: 29px; padding: 0 4px 0 12px; border-radius: 8px 8px 0 0; color: var(--bar-muted); cursor: default; user-select: none; }
+.doc-tab:hover:not(.active) { background: var(--bar-hover); color: var(--bar-text); }
+.doc-tab.active { background: var(--bar); color: var(--bar-text); }
+.doc-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.doc-tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.doc-tab-dirty { color: var(--gold); font-size: 9px; }
+.doc-tab-close, .doc-tab-new { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: inherit; font-size: 16px; line-height: 1; }
+.doc-tab-close:hover, .doc-tab-new:hover { background: var(--bar-hover); color: var(--bar-text); }
+.doc-tab-new { margin: 0 0 4px 4px; color: var(--bar-muted); flex: none; }
+
+/* recent files on the start screen */
+.recent { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); text-align: left; }
+.recent-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+.recent-head h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.recent-head .link { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; cursor: pointer; }
+.recent ul { list-style: none; margin: 0; padding: 0; max-width: 460px; }
+.recent-item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; text-align: left; }
+.recent-item:hover { background: var(--accent-soft); }
+.recent-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.recent-folder { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; direction: rtl; text-align: left; }

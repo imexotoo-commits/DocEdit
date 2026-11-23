@@ -28,27 +28,37 @@ export class PdfOpenError extends Error {
   constructor(message: string, readonly needsPassword = false) { super(message); }
 }
 
+/** How long opening one file may take. A normal document opens in well under a second; a file built to stall the parser never finishes. */
+export const OPEN_TIMEOUT_MS = 30_000;
+
 /** `password`: for a protected file viewed without decrypting it first (the browser viewer). */
 export async function loadSource(bytes: Uint8Array, name: string, password?: string): Promise<LoadedSource> {
   let doc: PDFDocumentProxy;
+  const deadline = Date.now() + OPEN_TIMEOUT_MS;
+  let timedOut = false;
+  const tooSlow = () => new PdfOpenError(`“${name}” took longer than ${OPEN_TIMEOUT_MS / 1000} seconds to open, so it was stopped. The file may be damaged or built to stall PDF readers.`);
+  const task = pdfjs.getDocument({
+    data: bytes.slice(), // pdf.js takes ownership of (detaches) the buffer it is given
+    isEvalSupported: false,
+    enableXfa: false,
+    cMapUrl: './pdfjs/cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: './pdfjs/standard_fonts/',
+    ...(password !== undefined ? { password } : {}),
+  });
+  const timer = setTimeout(() => { timedOut = true; void task.destroy(); }, OPEN_TIMEOUT_MS);
   try {
-    doc = await pdfjs.getDocument({
-      data: bytes.slice(), // pdf.js takes ownership of (detaches) the buffer it is given
-      isEvalSupported: false,
-      enableXfa: false,
-      cMapUrl: './pdfjs/cmaps/',
-      cMapPacked: true,
-      standardFontDataUrl: './pdfjs/standard_fonts/',
-      ...(password !== undefined ? { password } : {}),
-    }).promise;
+    doc = await task.promise;
   } catch (err) {
+    if (timedOut) throw tooSlow();
     const n = (err as { name?: string })?.name;
     if (n === 'PasswordException') throw new PdfOpenError(password !== undefined ? 'The password is not correct.' : `“${name}” is password-protected.`, true);
     if (n === 'InvalidPDFException') throw new PdfOpenError(`“${name}” is damaged or is not a valid PDF.`);
     throw new PdfOpenError(`Could not open “${name}”: ${err instanceof Error ? err.message : String(err)}`);
-  }
+  } finally { clearTimeout(timer); }
   const pages: PageGeometry[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
+    if (Date.now() > deadline) { void doc.destroy(); throw tooSlow(); } // a page tree built to be endless
     const page = await doc.getPage(i);
     const vp = page.getViewport({ scale: 1 });
     pages.push({ width: vp.width, height: vp.height, rotate: page.rotate, view: [...page.view] });

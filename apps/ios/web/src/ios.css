@@ -15,7 +15,7 @@ html.ios .empty { padding: 16px; box-sizing: border-box; }
 html.ios .empty-card { padding: 24px 18px; max-width: 100%; box-sizing: border-box; }
 html.ios .empty-card .hint { display: none; } /* there is no drag and drop onto a phone */
 html.ios .empty-new { flex-wrap: wrap; }
-/* these three need a Windows scanner, LibreOffice or a reMarkable folder: not available on iOS */
+/* these need LibreOffice or a Windows scanner: not available on iOS */
 html.ios .empty-new button:nth-of-type(n+4) { display: none; }
 html.ios .modal { min-width: 0; max-width: calc(100vw - 24px); box-sizing: border-box; }
 html.ios .split-pane { grid-template-columns: 1fr; }

@@ -3,7 +3,7 @@
  * PDF work runs in a Web Worker inside the web view, small stores live in the web view's own storage, and only things
  * that need the system (file pickers, saving, printing, opening links) go to Swift.
  */
-import type { CreateRequest, CreateResult, DocEditApi, MenuCommand, OpenedFile, PickedFile, RecoveredDocument, RecoverySnapshot, RecoverySummary, SaveRequest, SaveResult, SavedSignature } from '../../../desktop/src/shared/api.js';
+import type { CreateRequest, CreateResult, DocEditApi, MenuCommand, OpenedFile, PickedFile, RecentFile, RecoveredDocument, RecoverySnapshot, RecoverySummary, SaveRequest, SaveResult, SavedSignature } from '../../../desktop/src/shared/api.js';
 import { DEFAULT_SETTINGS, type Settings } from '../../../desktop/src/shared/settings.js';
 import type { CoreOps } from './coreWorker.js';
 import { fromBase64, hasNative, native, toBase64 } from './native.js';
@@ -93,11 +93,22 @@ export const emitMenu = (cmd: MenuCommand) => menuHandlers.forEach((h) => h(cmd)
 /** Swift calls this when the system hands the app a PDF (Files, share sheet, "Open in"). */
 export function deliverOpened(file: NativeFile | { error: string }) {
   let item: OpenedFile | { error: string };
-  try { item = 'error' in file ? file : toOpened(file); } catch (e) { item = { error: e instanceof Error ? e.message : String(e) }; }
+  try { item = 'error' in file ? file : toOpened(file); if (!('error' in item)) noteRecent(item); } catch (e) { item = { error: e instanceof Error ? e.message : String(e) }; }
   if (ready && openHandlers.size) openHandlers.forEach((h) => h(item)); else queuedOpens.push(item);
 }
 
-const settingsNow = (): Settings => ({ ...DEFAULT_SETTINGS, ...lsGet<Partial<Settings>>('settings', {}), remarkableFolder: null });
+const settingsNow = (): Settings => ({ ...DEFAULT_SETTINGS, ...lsGet<Partial<Settings>>('settings', {}) });
+
+
+// ---- recent files: kept in the web view's storage; a file is reopened through its token, which lasts for this run of the app ----
+const MAX_RECENT = 10;
+const recentNow = (): RecentFile[] => (settingsNow().rememberRecent ? lsGet<RecentFile[]>('recent', []) : []);
+const recentHandlers = new Set<(l: RecentFile[]) => void>();
+function setRecent(list: RecentFile[]) { lsSet('recent', list); recentHandlers.forEach((h) => h(list)); }
+function noteRecent(file: { path: string | null; name: string }) {
+  if (!file.path || !settingsNow().rememberRecent) return;
+  setRecent([{ path: file.path, name: file.name, folder: '', openedAt: Date.now() }, ...recentNow().filter((r) => r.path !== file.path)].slice(0, MAX_RECENT));
+}
 
 // ---- recovery ----
 interface RecoveryRecord { manifest: Omit<RecoverySnapshot, 'newSources' | 'firstNewSource'> & { updatedAt: number }; sources: Uint8Array[] }
@@ -108,7 +119,9 @@ const unavailable = (what: string) => ({ ok: false as const, message: `${what} i
 const api: DocEditApi = {
   async openDialog(multi) {
     const files = await native<NativeFile[] | null>('pickPdfs', { multi });
-    return files ? files.map(toOpened) : null;
+    const opened = files ? files.map(toOpened) : null;
+    opened?.forEach(noteRecent);
+    return opened;
   },
   async openDropped(file) {
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -129,7 +142,9 @@ const api: DocEditApi = {
         if (!r.ok) return r.cancelled ? { ok: false, cancelled: true } : { ok: false, cancelled: false, message: r.message ?? 'The file could not be saved.' };
         token = r.token ?? null; name = r.name ?? name;
       }
-      return { ok: true, file: { path: token ? iosPath(token) : null, name, bytes }, editBytes: plain };
+      const saved = { path: token ? iosPath(token) : null, name, bytes };
+      noteRecent(saved);
+      return { ok: true, file: saved, editBytes: plain };
     } catch (err) {
       return { ok: false, cancelled: false, message: err instanceof Error ? err.message : String(err) };
     }
@@ -164,7 +179,9 @@ const api: DocEditApi = {
     const token = tokenOf(path);
     if (!token) throw new Error('That file was not written in this session.');
     const f = await native<NativeFile>('readFile', { token });
-    return toOpened(f);
+    const opened = toOpened(f);
+    noteRecent(opened);
+    return opened;
   },
   async previewEdits(req) {
     try { return { ok: true, bytes: await run('layout', req.sources, req.slots as never, req.edits as never, await bundledFont()) }; }
@@ -267,9 +284,8 @@ const api: DocEditApi = {
   },
   async recoveryClear(id) { await idbDelete(rkey(id)); },
   async getSettings() { return settingsNow(); },
-  async remarkableChooseFolder() { return null; },
-  async remarkableList() { return unavailable('reMarkable import'); },
-  async remarkableOpen() { throw new Error('reMarkable import is not available on iOS.'); },
+  async scannerPresent() { return false; }, // scanning is not offered on iOS
+  onScannerPresent() { return () => {}; },
   async scanDevices() { return unavailable('Scanning'); },
   async scan() { return unavailable('Scanning'); },
   async scanClear() { /* nothing to clear */ },
@@ -285,12 +301,29 @@ const api: DocEditApi = {
     } catch (err) { return { ok: false, cancelled: false, message: err instanceof Error ? err.message : String(err) }; }
   },
   async setSettings(patch) {
-    const next = { ...settingsNow(), ...patch, remarkableFolder: null };
+    const next = { ...settingsNow(), ...patch };
+    if (!next.rememberRecent) lsSet('recent', []); // turning it off forgets the list
     lsSet('settings', next);
     settingsHandlers.forEach((h) => h(next));
     return next;
   },
   onSettings(handler) { settingsHandlers.add(handler); return () => { settingsHandlers.delete(handler); }; },
+  async recentList() { return recentNow(); },
+  async recentOpen(path) {
+    const token = tokenOf(path);
+    try {
+      if (!recentNow().some((r) => r.path === path) || !token) throw new Error('That file is not on the recent list.');
+      const opened = toOpened(await native<NativeFile>('readFile', { token }));
+      noteRecent(opened);
+      return opened;
+    } catch (err) {
+      setRecent(recentNow().filter((r) => r.path !== path)); // gone, or from an earlier run of the app: off the list
+      throw new Error(`That file can no longer be opened from the recent list. Open it again from Files. (${err instanceof Error ? err.message : String(err)})`);
+    }
+  },
+  async recentRemove(path) { setRecent(recentNow().filter((r) => r.path !== path)); },
+  async recentClear() { setRecent([]); },
+  onRecent(handler) { recentHandlers.add(handler); return () => { recentHandlers.delete(handler); }; },
   async recoveryList(): Promise<RecoverySummary[]> {
     const out: RecoverySummary[] = [];
     for (const k of await idbKeys()) {

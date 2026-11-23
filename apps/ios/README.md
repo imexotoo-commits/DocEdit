@@ -32,7 +32,7 @@ Debug builds accept launch arguments for testing: `-OpenFile /path/to.pdf` opens
 the worker and redaction end to end (reorder, rotate, encrypt, decrypt, then redact a secret and run the app's four byte-level checks) and logs `OAKQUEILL-SELFTEST PASS ...`.
 
 ## Not available on iOS (yet)
-Scanning (Windows only), reMarkable folder import, Word/Office conversion (needs LibreOffice), signing with a `.p12`
+Scanning (Windows only), Word/Office conversion (needs LibreOffice), signing with a `.p12`
 certificate. Those features are hidden or answer with a clear message. Redaction runs in the page with the pdf.js rasterizer (verified in the simulator by the self-test)
 and should still be tried on a real device and with large pages before you rely on it.
 
