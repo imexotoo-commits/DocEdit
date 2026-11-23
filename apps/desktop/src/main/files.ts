@@ -3,7 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import type { OpenedFile } from '../shared/api.js';
 
-/** Files above this size are refused until large-file memory use has been measured (see ROADMAP). */
+/** Files above this size are refused until large-file memory use has been measured. */
 export const MAX_FILE_BYTES = 512 * 1024 * 1024;
 
 export async function readPdfFile(path: string): Promise<OpenedFile> {

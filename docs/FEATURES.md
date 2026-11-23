@@ -16,7 +16,7 @@ Priority: P0 must-have for a first usable app, P1 next, P2 later.
 | Right-click menus | ✅ | P0 | Text boxes (cut, copy, paste, select all), page text (copy, highlight, underline, strike, mark for redaction), anywhere on a page (note, bookmark), page list (rotate, duplicate, blank page, save as PDF, bookmark, delete), pending changes (edit text, delete). |
 | Settings | ✅ | P0 | Theme (match Windows, light, dark), zoom and tool tab for newly opened documents, redaction into a copy or into the open document, crash recovery on or off. Saved in the profile folder. |
 | Continuous / single / two-page view | ⬜ | P1 | |
-| Tabs / recent files | ⬜ | P1 | |
+| Tabs / recent files | ✅ | P1 | Several documents in one window as tabs (Ctrl+T new, Ctrl+Tab / Ctrl+Shift+Tab to switch, Ctrl+W or middle-click to close; Cmd+T and Cmd+W on a Mac). Opening a file uses a new tab when the current one shows a document, and switches to the tab of a file that is already open, so nothing is replaced. One running copy: a PDF opened from Explorer or Finder (Open With, double-click, the Dock icon) joins the open window as a tab. Closing the window asks once and can save every unsaved tab. Recent files (last 10) under File › Open Recent, on the start screen and in the Windows jump list or the Dock menu on a Mac; a setting turns this off and clears the list. |
 
 ## Organize pages
 | Merge several PDFs (with page selection) | ✅ | P0 | `mergePdfs` |
@@ -32,7 +32,7 @@ Priority: P0 must-have for a first usable app, P1 next, P2 later.
 
 ## Edit
 | Add text, shapes, images to a page | ✅ | P0 | As annotations (text box, rectangle, ellipse, freehand) and `placeImage`; editing existing page content is phase 4. |
-| Edit existing text in place | ⬜ | P1 | Hard: needs a content-stream text model; see ROADMAP. Start with "replace whole text run, same font". |
+| Edit existing text in place | ⬜ | P1 | Hard: needs a content-stream text model. Start with "replace whole text run, same font". |
 | Edit/replace/move images | ⬜ | P2 | |
 | Watermark / background | ✅ | P0 | Text watermark with opacity and angle, fitted to each page (image watermark ⬜). |
 | Links (add/edit) | 🟡 | P0 | Add links to a page or a web/mail address; pending links can be removed. Editing links already in a file ⬜. |
@@ -71,13 +71,12 @@ Priority: P0 must-have for a first usable app, P1 next, P2 later.
 | Create PDF from Office documents | 🟡 | P0 | Uses an installed LibreOffice (isolated profile, macros off, timeout, cancel). Tested against a stand-in executable only; real-LibreOffice testing of tables, page breaks, images, print areas, slides and non-Latin fonts is still to do. Without LibreOffice the app explains the manual export route. |
 | Create PDF from HTML / virtual printer | ⬜ | P2 | separate projects |
 | Export to Word, text, images | ✅ | P1 | Export dialog: .docx rebuilt from the page text (paragraphs, headings, page breaks; pages without text as pictures; layout, columns and tables approximated), .txt, PNG/JPEG per page. Own ZIP/.docx writer, no dependency. |
-| Open from reMarkable | ✅ | P1 | Through reMarkable's own PDF export: the user picks the folder they export to (or a synced OneDrive/Google Drive/Dropbox folder); File › Open from reMarkable lists its PDFs newest first with previews. Only files inside that folder can be opened; the folder is set through a folder dialog, never by the page. The reMarkable app's private files are not read. |
-| Scan to PDF | 🟡 | P1 | Windows scanning (WIA): scanners and multifunction printers Windows sees, flatbed or feeder, colour/greyscale/black and white, 150–600 dpi, pages collected then made into a PDF. Device listing tested; real scans to be tested on hardware. |
+| Scan to PDF | 🟡 | P1 | Windows scanning (WIA), offered (start screen and File › New) only when Windows sees a scanner, checked in the background after start-up and when the app comes back to the front: scanners and multifunction printers Windows sees, flatbed or feeder, colour/greyscale/black and white, 150–600 dpi, pages collected then made into a PDF. Device listing tested; real scans to be tested on hardware. |
 | OCR scanned pages (searchable text layer) | ⬜ | P1 | candidates: Tesseract (Apache-2.0) |
 | PDF/A, PDF/UA (accessibility) checks and tagging | ⬜ | P2 | |
 
 ## Platform
 | Desktop app (Windows, macOS, Linux), offline, no account, no telemetry by default | 🟡 | P0 | `apps/desktop` (Electron, sandboxed renderer, no network use). Windows installer and portable .exe via `npm run dist -w @docedit/desktop` (unsigned). macOS dmg and zip via `npm run dist:mac -w @docedit/desktop` (ad-hoc signed, not notarized; Finder open-with and Dock drop work). Linux package ⬜. |
-| iPhone and iPad app | 🟡 | P1 | `apps/ios`: SwiftUI shell running the desktop renderer in a web view, the core in a Web Worker, system pickers/print/links in Swift. Verified in the simulator (open, render, worker and redaction self-test). Scan, reMarkable, Office conversion and certificate signing are not on iOS. Device and TestFlight builds need an Apple Developer account. See `apps/ios/README.md`. |
+| iPhone and iPad app | 🟡 | P1 | `apps/ios`: SwiftUI shell running the desktop renderer in a web view, the core in a Web Worker, system pickers/print/links in Swift. Verified in the simulator (open, render, worker and redaction self-test). Scan, Office conversion and certificate signing are not on iOS. Device and TestFlight builds need an Apple Developer account. See `apps/ios/README.md`. |
 | Command line and scripting | ✅ | P1 | `docedit` CLI |
 | Batch processing | 🟡 | P2 | CLI can be scripted |

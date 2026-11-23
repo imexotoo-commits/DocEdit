@@ -2,7 +2,7 @@
 
 Oakqueill PDF Editor is a clean-room PDF reader and editor: an open, no-subscription alternative to Acrobat-class tools. It reads, searches, prints, creates, organizes, annotates, fills forms, signs visually and redacts for real (the text is destroyed, not hidden, and the result is verified). A tested headless core library sits under every app.
 
-Read first: [docs/CLEAN_ROOM.md](docs/CLEAN_ROOM.md) (rules for contributors), then [docs/HANDOFF_CODEX.md](docs/HANDOFF_CODEX.md) (state of the code and what to do next). Licence: [MIT](LICENSE). Third-party components keep their own licences ([docs/LICENSES.md](docs/LICENSES.md)).
+Contributors: read [docs/CLEAN_ROOM.md](docs/CLEAN_ROOM.md) first (rules for contributors), then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). What works today is listed in [docs/FEATURES.md](docs/FEATURES.md). Licence: [MIT](LICENSE). Third-party components keep their own licences ([docs/LICENSES.md](docs/LICENSES.md)).
 
 _Internal names (the `@docedit/*` packages, the `docedit` command and this repository) still use the working name DocEdit._
 
@@ -25,7 +25,7 @@ npm install
 npm run build -w @docedit/core
 npm run dist:mac -w @docedit/desktop
 ```
-Produces `apps/desktop/release/Oakqueill-<version>-mac-<arch>.dmg` and a zip (universal: Apple Silicon and Intel). Local and CI test builds are ad-hoc signed, not notarized, so on first launch right-click the app and choose Open (or allow it in System Settings, Privacy & Security). Notarized releases need an Apple Developer ID: see [docs/MACOS_RELEASE.md](docs/MACOS_RELEASE.md). Finder "Open With", double-click and dropping a PDF on the Dock icon open files in the app (each file in its own window, never replacing an open document).
+Produces `apps/desktop/release/Oakqueill-<version>-mac-<arch>.dmg` and a zip (universal: Apple Silicon and Intel). Local and CI test builds are ad-hoc signed, not notarized, so on first launch right-click the app and choose Open (or allow it in System Settings, Privacy & Security). Notarized releases need an Apple Developer ID: see [docs/MACOS_RELEASE.md](docs/MACOS_RELEASE.md). Finder "Open With", double-click and dropping a PDF on the Dock icon open files in the app: a file opens in a new tab of the open window, so nothing you have open is replaced. Several documents can be open as tabs (Cmd+T, Cmd+W, Ctrl+Tab), and File › Open Recent and the Dock menu list the last ten files (a setting turns that off).
 Settings, saved signatures and crash-recovery data live in `~/Library/Application Support/Oakqueill`.
 
 ## Browser extension (Chrome, Safari, Firefox, Opera and more)
@@ -39,4 +39,4 @@ Settings, saved signatures and crash-recovery data live in `~/Library/Applicatio
 | [`iOS`](../../tree/iOS) | iPhone and iPad app: core, the shared renderer and a SwiftUI shell that runs it in a web view. |
 
 ## Docs
-[FEATURES](docs/FEATURES.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [REDACTION](docs/REDACTION.md) · [SIGNING](docs/SIGNING.md) · [ROADMAP](docs/ROADMAP.md) · [LICENSES](docs/LICENSES.md) · [PROVENANCE](docs/PROVENANCE.md)
+[FEATURES](docs/FEATURES.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [REDACTION](docs/REDACTION.md) · [SIGNING](docs/SIGNING.md) · [BROWSER_EXTENSION](docs/BROWSER_EXTENSION.md) · [MACOS_RELEASE](docs/MACOS_RELEASE.md) · [LICENSES](docs/LICENSES.md) · [PROVENANCE](docs/PROVENANCE.md)

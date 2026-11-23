@@ -18,8 +18,12 @@ export function isInsideDir(dir: string, url: string): boolean {
   return target === root || target.startsWith(root + sep);
 }
 
-/** What the page says about its document, reduced to safe values (the page is not trusted to send the right shape). */
-export function parseDocumentState(state: unknown): { title: string; dirty: boolean } {
-  const s = (state && typeof state === 'object' ? state : {}) as { title?: unknown; dirty?: unknown };
-  return { title: typeof s.title === 'string' ? s.title.slice(0, 300) : '', dirty: s.dirty === true };
+/**
+ * What the page says about its documents, reduced to safe values (the page is not trusted to send the right shape):
+ * the title of the shown document, whether it has unsaved changes, and how many documents in the window do.
+ */
+export function parseDocumentState(state: unknown): { title: string; dirty: boolean; unsaved: number } {
+  const s = (state && typeof state === 'object' ? state : {}) as { title?: unknown; dirty?: unknown; unsaved?: unknown };
+  const unsaved = typeof s.unsaved === 'number' && Number.isFinite(s.unsaved) ? Math.min(Math.max(Math.trunc(s.unsaved), 0), 1000) : 0;
+  return { title: typeof s.title === 'string' ? s.title.slice(0, 300) : '', dirty: s.dirty === true, unsaved };
 }

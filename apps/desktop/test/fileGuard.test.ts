@@ -42,7 +42,8 @@ describe('the page may load files from its own folder only', () => {
 
 describe('what the page says about its document is reduced to safe values', () => {
   it('keeps a well-formed report', () => {
-    expect(parseDocumentState({ title: 'Report.pdf', dirty: true })).toEqual({ title: 'Report.pdf', dirty: true });
+    expect(parseDocumentState({ title: 'Report.pdf', dirty: true, unsaved: 2 })).toEqual({ title: 'Report.pdf', dirty: true, unsaved: 2 });
+    expect(parseDocumentState({ title: 'Report.pdf', dirty: false })).toEqual({ title: 'Report.pdf', dirty: false, unsaved: 0 });
   });
 
   it.each([undefined, null, 42, 'x', [], () => 1, { title: { a: 1 }, dirty: 'yes' }, { title: 5, dirty: 1 }])('survives %j without throwing', (bad) => {
@@ -50,6 +51,15 @@ describe('what the page says about its document is reduced to safe values', () =
     expect(typeof s.title).toBe('string');
     expect(s.dirty === true || s.dirty === false).toBe(true);
     expect(s.dirty).toBe(false);
+    expect(s.unsaved).toBe(0);
+  });
+
+  it('keeps the unsaved count a small whole number', () => {
+    expect(parseDocumentState({ unsaved: -5 }).unsaved).toBe(0);
+    expect(parseDocumentState({ unsaved: 2.9 }).unsaved).toBe(2);
+    expect(parseDocumentState({ unsaved: 1e12 }).unsaved).toBe(1000);
+    expect(parseDocumentState({ unsaved: NaN }).unsaved).toBe(0);
+    expect(parseDocumentState({ unsaved: '3' }).unsaved).toBe(0);
   });
 
   it('shortens an absurd title', () => {

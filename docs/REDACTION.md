@@ -35,7 +35,7 @@ Guarantees (each covered by `packages/core/test/redact.test.ts`):
 - internal links on kept pages are dropped (they can reference redacted pages).
 
 Known trade-offs of strategy A:
-- Redacted pages lose **all** text, not only the marked words (the page is a picture). Search/copy/accessibility on those pages is gone. Run OCR afterwards if searchable text is needed (ROADMAP).
+- Redacted pages lose **all** text, not only the marked words (the page is a picture). Search/copy/accessibility on those pages is gone. Run OCR afterwards if searchable text is needed (OCR is planned).
 - File size grows (a page picture at 200 dpi is roughly 0.3-2 MB as Flate). Switch to JPEG/JBIG2 for big files later.
 - Annotations, form fields, links and bookmarks on redacted pages are dropped. Document outline and metadata of the source are not carried over.
 - Marks that cover text only partially still blank the whole rectangle (that is what the user drew).

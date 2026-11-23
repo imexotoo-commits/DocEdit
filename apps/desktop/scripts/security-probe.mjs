@@ -119,7 +119,8 @@ const cases = [
   ['readImage of a file never chosen', `window.docedit.readImage('/etc/hosts')`],
   ['convertOffice of a file never chosen', `window.docedit.convertOffice('/etc/hosts')`],
   ['certSign with a key file never chosen', `window.docedit.certSign({ pdf: new Uint8Array([1]), p12Path: '/etc/hosts', password: 'x', page: 0 })`],
-  ['remarkableOpen with a path as id', `window.docedit.remarkableOpen('../../../../etc/hosts')`],
+  ['recentOpen with a path that is not on the recent list', `window.docedit.recentOpen('/etc/hosts')`],
+  ['recentOpen with a ../ path', `window.docedit.recentOpen('../../../../etc/hosts')`],
   ['openDropped with a path string instead of a File', `window.docedit.openDropped('/etc/hosts')`],
   ['openDropped with a File that has no path', `window.docedit.openDropped(new File(['%PDF-1.4'], 'x.pdf'))`],
   ['recoveryLoad with ../ in the id', `window.docedit.recoveryLoad('../../../etc')`],
@@ -134,9 +135,9 @@ const escaped = readdirSync(tmp).filter((n) => /evil|recovery|etc/.test(n));
 check('no file was created outside the profile by crafted ids', escaped.length === 0, escaped.join(','));
 
 // ---- 6. settings cannot be used to aim the app at other folders ----
-const set = await inPage(`const s = await window.docedit.setSettings({ remarkableFolder: '/etc', theme: '<script>', redaction: 'weird', recovery: 'yes', __proto__: { polluted: 1 } }); const g = await window.docedit.getSettings(); return { s, g, p: ({}).polluted }`);
+const set = await inPage(`const s = await window.docedit.setSettings({ remarkableFolder: '/etc', theme: '<script>', redaction: 'weird', recovery: 'yes', rememberRecent: 'maybe', __proto__: { polluted: 1 } }); const g = await window.docedit.getSettings(); return { s, g, p: ({}).polluted }`);
 const sv = set.value;
-check('settings reject a folder, unknown theme and values of the wrong type', sv && sv.g.remarkableFolder !== '/etc' && ['system', 'light', 'dark'].includes(sv.g.theme) && ['copy', 'in-place'].includes(sv.g.redaction) && typeof sv.g.recovery === 'boolean' && sv.p === undefined, JSON.stringify(sv?.g));
+check('settings reject a folder, unknown theme and values of the wrong type', sv && sv.g.remarkableFolder === undefined && typeof sv.g.rememberRecent === 'boolean' && ['system', 'light', 'dark'].includes(sv.g.theme) && ['copy', 'in-place'].includes(sv.g.redaction) && typeof sv.g.recovery === 'boolean' && sv.p === undefined, JSON.stringify(sv?.g));
 
 // ---- 7. hostile PDF content is shown as text, never run ----
 const dom = await inPage(`await new Promise(r => setTimeout(r, 500)); return { xss: window.__xss ?? null, imgs: document.querySelectorAll('img[src="x"], img[onerror], script:not([src])').length, opened: document.body.innerText.length > 0 }`);
@@ -144,7 +145,7 @@ check('HTML in the document title, outline and notes is not interpreted', dom.va
 
 // ---- 8. malformed calls must not crash or hang the main process ----
 const garbage = ['undefined', 'null', "'x'", '42', '{}', '[]', '({ bytes: new Uint8Array(4) })', "({ files: [], kind: 'png' })", "[{ name: '../../x', bytes: new Uint8Array(2) }]", "new Uint8Array(0)"];
-const methods = ['decrypt', 'inspect', 'sanitize', 'previewEdits', 'setDocumentState', 'verifySignatures', 'listFormFields', 'readImage', 'readTextFile', 'signaturesSave', 'signaturesDelete', 'createDocument', 'recoverySave', 'recoveryClear', 'recoveryLoad', 'setSettings', 'editCommand', 'closeWindowAfterSave', 'certSign', 'officeConverter', 'remarkableList', 'remarkableOpen', 'scanDevices', 'saveCopy', 'saveExport', 'openWritten', 'cancelConvert', 'scanClear', 'getSettings', 'recoveryList', 'signaturesList'];
+const methods = ['decrypt', 'inspect', 'sanitize', 'previewEdits', 'setDocumentState', 'verifySignatures', 'listFormFields', 'readImage', 'readTextFile', 'signaturesSave', 'signaturesDelete', 'createDocument', 'recoverySave', 'recoveryClear', 'recoveryLoad', 'setSettings', 'editCommand', 'closeWindowAfterSave', 'certSign', 'officeConverter', 'recentList', 'recentOpen', 'recentRemove', 'recentClear', 'scannerPresent', 'scanDevices', 'saveCopy', 'saveExport', 'openWritten', 'cancelConvert', 'scanClear', 'getSettings', 'recoveryList', 'signaturesList'];
 let calls = 0;
 const culprits = [];
 // "Error occurred in handler for" is Electron logging a call that was rejected back to the page: harmless. Only an uncaught
