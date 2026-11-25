@@ -23,12 +23,12 @@ export class PdfJsRasterizer implements Rasterizer {
     canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
     const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true })!;
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport, intent: 'print' }).promise;
+    await page.render({ canvas: null, canvasContext: ctx, viewport, intent: 'print' }).promise;
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     canvas.width = 0; canvas.height = 0;
     return { width: Math.round(viewport.width), height: Math.round(viewport.height), data, transform: viewport.transform as RasterPage['transform'], scale };
   }
-  async close() { for (const s of this.cache.values()) void (await s).doc.destroy(); this.cache.clear(); }
+  async close() { for (const s of this.cache.values()) void (await s).doc.loadingTask.destroy(); this.cache.clear(); }
 }
 
 export interface RedactionCheck { label: string; ok: boolean; detail?: string }
@@ -79,7 +79,7 @@ async function verify(before: Uint8Array, out: Uint8Array, marks: RedactionMark[
     const coverage = await checkRedactionCoverage(before, out, marks, checker).finally(() => checker.close());
     const offPage = coverage.filter((c) => c.reason === 'off-page').length, uncovered = coverage.filter((c) => c.reason === 'not-covered').length;
     checks.push({ label: 'Every marked area is fully covered', ok: coverage.length === 0, detail: coverage.length ? [offPage ? `${offPage} mark${offPage === 1 ? ' is' : 's are'} outside the page` : '', uncovered ? `${uncovered} mark${uncovered === 1 ? ' is' : 's are'} not fully covered` : ''].filter(Boolean).join('; ') : `${marks.length} mark${marks.length === 1 ? '' : 's'}, every pixel checked` });
-  } finally { void src.doc.destroy(); }
+  } finally { void src.doc.loadingTask.destroy(); }
   return checks;
 }
 

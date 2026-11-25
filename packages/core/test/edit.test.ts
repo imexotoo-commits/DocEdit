@@ -11,7 +11,7 @@ const dejavu = new Uint8Array(readFileSync(createRequire(import.meta.url).resolv
 /** Read a PDF back with pdf.js (an independent reader). */
 async function pdfjs(bytes: Uint8Array) {
   const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  return lib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+  return lib.getDocument({ data: bytes.slice() }).promise;
 }
 
 describe('applyEdits: page furniture', () => {

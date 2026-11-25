@@ -78,7 +78,9 @@ final class WebHost: NSObject, WKNavigationDelegate, WKUIDelegate {
     // Anything that is not the app page leaves through the system, never inside this view.
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = action.request.url else { return .cancel }
-        if url.scheme == BundleSchemeHandler.scheme || url.scheme == "about" || url.scheme == "blob" || url.scheme == "data" { return .allow }
+        // the app's own pages, and about:blank (an empty frame). Not data: or blob: pages, which could then talk to Swift.
+        if url.scheme == BundleSchemeHandler.scheme && url.host == "app" { return .allow }
+        if url.absoluteString == "about:blank" { return .allow }
         return .cancel
     }
 

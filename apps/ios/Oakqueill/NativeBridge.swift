@@ -20,6 +20,11 @@ final class NativeBridge: NSObject, WKScriptMessageHandlerWithReply {
     static let maxBytes = 512 * 1024 * 1024
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor (Any?, String?) -> Void) {
+        // Only the app's own page, in the main frame, may ask Swift for anything: not another frame and not a page that got loaded
+        // some other way (the handler is attached to the whole web view).
+        guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.protocol == BundleSchemeHandler.scheme, message.frameInfo.securityOrigin.host == "app" else {
+            replyHandler(nil, "Not allowed from this page"); return
+        }
         guard let body = message.body as? [String: Any], let op = body["op"] as? String else { replyHandler(nil, "Bad message"); return }
         let args = body["args"] as? [String: Any] ?? [:]
         Task { @MainActor in

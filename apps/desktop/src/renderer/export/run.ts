@@ -12,7 +12,7 @@ async function renderImage(page: PDFPageProxy, dpi: number, type: 'image/png' | 
   canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
   const ctx = canvas.getContext('2d', { alpha: false })!;
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
+  await page.render({ canvas: null, canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
   const blob = await new Promise<Blob>((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error('Could not encode the page image'))), type, 0.9));
   canvas.width = 0; canvas.height = 0;
   return { bytes: new Uint8Array(await blob.arrayBuffer()), width: base.width, height: base.height };
@@ -62,5 +62,5 @@ export async function exportDocument(bytes: Uint8Array, title: string, kind: Exp
     onStep('Writing the file…');
     if (kind === 'txt') return [{ name: `${base}.txt`, bytes: new TextEncoder().encode('﻿' + buildText(pages)) }];
     return [{ name: `${base}.docx`, bytes: await buildDocx(pages, base) }];
-  } finally { void src.doc.destroy(); }
+  } finally { void src.doc.loadingTask.destroy(); }
 }

@@ -1,4 +1,5 @@
 /** pdf.js setup for the renderer: loading documents safely and reading what the editor needs up front. */
+import { hasDigitalSignature } from './signedBytes.js';
 import * as pdfjs from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -39,11 +40,14 @@ export async function loadSource(bytes: Uint8Array, name: string, password?: str
   const tooSlow = () => new PdfOpenError(`“${name}” took longer than ${OPEN_TIMEOUT_MS / 1000} seconds to open, so it was stopped. The file may be damaged or built to stall PDF readers.`);
   const task = pdfjs.getDocument({
     data: bytes.slice(), // pdf.js takes ownership of (detaches) the buffer it is given
-    isEvalSupported: false,
     enableXfa: false,
     cMapUrl: './pdfjs/cmaps/',
     cMapPacked: true,
     standardFontDataUrl: './pdfjs/standard_fonts/',
+    // JPEG 2000 and JBIG2 images (scans) and colour profiles. Absolute, because pdf.js's worker fetches these and would read a
+    // relative address against its own folder.
+    wasmUrl: new URL('./pdfjs/wasm/', document.baseURI).href,
+    iccUrl: new URL('./pdfjs/iccs/', document.baseURI).href,
     ...(password !== undefined ? { password } : {}),
   });
   const timer = setTimeout(() => { timedOut = true; void task.destroy(); }, OPEN_TIMEOUT_MS);
@@ -58,7 +62,7 @@ export async function loadSource(bytes: Uint8Array, name: string, password?: str
   } finally { clearTimeout(timer); }
   const pages: PageGeometry[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
-    if (Date.now() > deadline) { void doc.destroy(); throw tooSlow(); } // a page tree built to be endless
+    if (Date.now() > deadline) { void doc.loadingTask.destroy(); throw tooSlow(); } // a page tree built to be endless
     const page = await doc.getPage(i);
     const vp = page.getViewport({ scale: 1 });
     pages.push({ width: vp.width, height: vp.height, rotate: page.rotate, view: [...page.view] });
@@ -71,7 +75,7 @@ export async function loadSource(bytes: Uint8Array, name: string, password?: str
     notes: {
       outline: !!outline && outline.length > 0,
       formFields: allFields.length > 0,
-      signatures: allFields.some((f) => f.type === 'signature'),
+      signatures: hasDigitalSignature(bytes) || allFields.some((f) => f.type === 'signature'),
     },
   };
 }

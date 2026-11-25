@@ -262,7 +262,7 @@ export function App({ active, first, initialFile, initialNotice, register, onInf
       const loadedSources = await Promise.all(rec.sources.map((b, i) => loadSource(b, i === 0 ? rec.title : `source ${i + 1}`)));
       const sources: SourceFile[] = rec.sources.map((bytes, i) => ({ path: i === 0 ? rec.path : null, name: i === 0 ? rec.title : `source ${i + 1}`, bytes, pageCount: loadedSources[i]!.pages.length }));
       const ed = restoreEditor(rec, sources);
-      loaded.forEach((l) => void l.doc.destroy());
+      loaded.forEach((l) => void l.doc.loadingTask.destroy());
       sentSources.current.set(id, sources.length);
       setLoaded(loadedSources);
       setEditor(ed);
@@ -319,7 +319,7 @@ export function App({ active, first, initialFile, initialNotice, register, onInf
         if (e instanceof PdfOpenError && e.needsPassword) { askPassword(file, keepPage); return; }
         throw e;
       }
-      loaded.forEach((l) => void l.doc.destroy());
+      loaded.forEach((l) => void l.doc.loadingTask.destroy());
       const ed: Editor = { ...createEditor({ path: file.path, name: file.name, bytes: file.bytes, pageCount: src.pages.length }), protection };
       setLoaded([src]);
       setEditor(ed);
@@ -469,14 +469,14 @@ export function App({ active, first, initialFile, initialNotice, register, onInf
   async function closeDocument(): Promise<boolean> {
     if (!editor) return true;
     if (!(await confirmDiscard())) return false;
-    loaded.forEach((l) => void l.doc.destroy());
+    loaded.forEach((l) => void l.doc.loadingTask.destroy());
     setEditor(null); setLoaded([]); setSelection(new Set()); setCurrent(0); setNotice(null);
     return true;
   }
   // a closed tab lets go of its documents
   const loadedRef = useRef(loaded);
   loadedRef.current = loaded;
-  useEffect(() => () => loadedRef.current.forEach((l) => void l.doc.destroy()), []);
+  useEffect(() => () => loadedRef.current.forEach((l) => void l.doc.loadingTask.destroy()), []);
 
   // ---------- page edits ----------
   function edit(fn: (pages: PageItem[]) => PageItem[]) {

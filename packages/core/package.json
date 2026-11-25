@@ -27,10 +27,10 @@
     "@cantoo/fontkit": "^2.0.12",
     "@cantoo/pdf-lib": "^2.11.1",
     "asn1js": "^4.0.0",
-    "pdfjs-dist": "^4.10.38",
+    "pdfjs-dist": "^6.5.438",
     "pkijs": "^4.0.1"
   },
   "optionalDependencies": {
-    "@napi-rs/canvas": "^0.1.65"
+    "@napi-rs/canvas": "^1.2.0"
   }
 }

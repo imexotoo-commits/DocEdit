@@ -111,15 +111,15 @@ export function FurnitureDialog({ pages, sources, selection, onApply, onClose }:
         if (!live) return;
         if (!res.ok) { setPreviewError(res.message); return; }
         const src = await loadSource(res.bytes, 'preview');
-        if (!live) { void src.doc.destroy(); return; }
-        setPreview((old) => { void old?.src.doc.destroy(); return { src, count: n }; });
+        if (!live) { void src.doc.loadingTask.destroy(); return; }
+        setPreview((old) => { void old?.src.doc.loadingTask.destroy(); return { src, count: n }; });
         setPreviewError('');
       } catch (e) { if (live) setPreviewError(e instanceof Error ? e.message : String(e)); }
     }, 350);
     return () => { live = false; clearTimeout(t); };
   }, [wmText, wmOpacity, wmAngle, texts, size, margin, startPage, bates, scopeKind, range]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => { void preview?.src.doc.destroy(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { void preview?.src.doc.loadingTask.destroy(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function apply() {
     try {

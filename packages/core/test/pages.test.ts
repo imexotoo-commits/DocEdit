@@ -100,11 +100,11 @@ describe('arrangePages', () => {
     const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const src = await addInternalLink(await makePdf(['P1', 'P2', 'P3']), 0, 2);
     const without = await arrangePages([src], [{ source: 0, page: 0 }, { source: 0, page: 1 }]);
-    const d1 = await lib.getDocument({ data: without.slice(), isEvalSupported: false }).promise;
+    const d1 = await lib.getDocument({ data: without.slice() }).promise;
     expect((await (await d1.getPage(1)).getAnnotations()).filter((a: { subtype: string }) => a.subtype === 'Link')).toEqual([]);
     expect(Buffer.from(without).toString('latin1').match(/\/Type \/Page\b/g)?.length).toBe(2); // no stray copy of page 3
     const reordered = await arrangePages([src], [{ source: 0, page: 2 }, { source: 0, page: 0 }]);
-    const d2 = await lib.getDocument({ data: reordered.slice(), isEvalSupported: false }).promise;
+    const d2 = await lib.getDocument({ data: reordered.slice() }).promise;
     const [link] = (await (await d2.getPage(2)).getAnnotations()) as Array<{ dest: unknown[] }>;
     expect(await d2.getPageIndex(link!.dest[0] as never)).toBe(0);
   });
@@ -125,7 +125,7 @@ describe('arrangePages', () => {
     ]));
     const src = await doc.save();
     const targets = async (pdf: Uint8Array, pageNo: number) => {
-      const d = await lib.getDocument({ data: pdf.slice(), isEvalSupported: false }).promise;
+      const d = await lib.getDocument({ data: pdf.slice() }).promise;
       const links = ((await (await d.getPage(pageNo)).getAnnotations()) as Array<{ subtype: string; dest: unknown }>).filter((a) => a.subtype === 'Link');
       return Promise.all(links.map(async (l) => {
         const dest = (typeof l.dest === 'string' ? await d.getDestination(l.dest) : l.dest) as Array<{ name?: string } | number | null> | null;

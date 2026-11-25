@@ -22,9 +22,9 @@ export default defineConfig({
       name: 'copy-pdfjs-data',
       closeBundle() {
         const dir = dirname(require.resolve('pdfjs-dist/package.json'));
-        for (const d of ['cmaps', 'standard_fonts']) {
+        for (const d of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) {
           mkdirSync(join(out, 'pdfjs'), { recursive: true });
-          cpSync(join(dir, d), join(out, 'pdfjs', d), { recursive: true });
+          cpSync(join(dir, d), join(out, 'pdfjs', d), { recursive: true, filter: (src) => !/quickjs/i.test(src) }); // not the script engine: PDF scripts never run
         }
       },
     },
