@@ -63,7 +63,7 @@ export function PageCanvas({ doc, pageIndex, rotation, scale, width, height, tex
       canvas.height = Math.max(1, Math.floor(viewport.height * pxScale));
       const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) return;
-      renderTask = page.render({ canvasContext: ctx, viewport, transform: pxScale !== 1 ? [pxScale, 0, 0, pxScale, 0, 0] : undefined });
+      renderTask = page.render({ canvas: null, canvasContext: ctx, viewport, transform: pxScale !== 1 ? [pxScale, 0, 0, pxScale, 0, 0] : undefined });
       await renderTask.promise;
       if (cancelled) return;
       if (wantLinks) {
@@ -75,7 +75,9 @@ export function PageCanvas({ doc, pageIndex, rotation, scale, width, height, tex
           const url = a.url ?? a.unsafeUrl;
           const link: PageLink | null = url ? { url } : a.dest != null ? { dest: a.dest } : null;
           if (!link) continue; // actions such as JavaScript or launching files are never offered
-          const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = viewport.convertToViewportRectangle(a.rect);
+          // the rectangle's two opposite corners in the viewport (pdf.js 6 has the point conversion only)
+          const [x1 = 0, y1 = 0] = viewport.convertToViewportPoint(a.rect[0] ?? 0, a.rect[1] ?? 0) as number[];
+          const [x2 = 0, y2 = 0] = viewport.convertToViewportPoint(a.rect[2] ?? 0, a.rect[3] ?? 0) as number[];
           boxes.push({ link, left: Math.min(x1, x2), top: Math.min(y1, y2), width: Math.abs(x2 - x1), height: Math.abs(y2 - y1), title: url ? url : 'Go to linked page' });
         }
         setLinks(boxes);

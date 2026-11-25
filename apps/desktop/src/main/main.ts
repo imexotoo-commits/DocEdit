@@ -16,7 +16,7 @@ import { onSafe } from './ipcSafe.js';
 import { isInsideDir, parseDocumentState } from './fileGuard.js';
 import { pickWindowForOpen } from './openRouting.js';
 import { readPdfFile, writeFileSafely } from './files.js';
-import { printPages } from './print.js';
+import { livePrintDirs, printPages } from './print.js';
 import { cancelConversion, convertOffice, createDocument, officeConverter, pickFiles, readApproved, readImage, readTextFile } from './create.js';
 import { safeMailto } from './links.js';
 import { describeCertificate, signerFromPkcs12, TrustStore } from './certificates.js';
@@ -613,9 +613,10 @@ app.whenReady().then(() => {
   // The app needs no camera, microphone, notifications, etc.
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
-  // The page may load files from the app's own folder only, never other local files (see fileGuard.ts).
+  // The page may load files from the app's own folder only, never other local files (see fileGuard.ts); a running print job's
+  // temporary folder is allowed too.
   const rendererDir = join(here, '../renderer');
-  session.defaultSession.webRequest.onBeforeRequest({ urls: ['file://*/*'] }, (details, cb) => cb({ cancel: !isInsideDir(rendererDir, details.url) }));
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['file://*/*'] }, (details, cb) => cb({ cancel: !(isInsideDir(rendererDir, details.url) || [...livePrintDirs].some((d) => isInsideDir(d, details.url))) }));
   registerIpc();
   registerPrompts(here);
   registerCoreWorker(here);

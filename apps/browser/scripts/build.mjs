@@ -46,7 +46,8 @@ for (const target of TARGETS) {
   const bg = await esbuild({ entryPoints: [`src/background/${target}.ts`], outfile: join(dist, 'background.js'), bundle: true, format: 'esm', target: ESBUILD_TARGET[target], logLevel: 'warning', metafile: true });
   for (const input of Object.keys(bg.metafile.inputs)) bundled.add(join(root, input));
   // pdf.js character maps and standard fonts next to the viewer page
-  for (const d of ['cmaps', 'standard_fonts']) cpSync(join(pdfjsDir, d), join(dist, 'pdfjs', d), { recursive: true });
+  // not the QuickJS engine pdf.js carries for running scripts inside PDFs: the viewer never runs them
+  for (const d of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) cpSync(join(pdfjsDir, d), join(dist, 'pdfjs', d), { recursive: true, filter: (src) => !/quickjs/i.test(src) });
   bundled.add(join(pdfjsDir, 'build', 'pdf.worker.min.mjs'));
   writeFileSync(join(dist, 'manifest.json'), JSON.stringify(manifestFor(target, base, pkg.version), null, 2));
   cpSync('icons', join(dist, 'icons'), { recursive: true });

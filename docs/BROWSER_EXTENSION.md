@@ -135,6 +135,10 @@ Printing renders each page as an image at 150 dpi (very large pages at less, at 
 capped at about 120 letter-size pages; a longer document asks which pages to print. Preparing pages can be cancelled,
 and every image is released when the job is cancelled, fails or the print dialog closes.
 
+## Images in scanned PDFs
+
+pdf.js draws JPEG 2000 and JBIG2 images (common in scanned documents) with WebAssembly decoders, which are part of the extension (`pdfjs/wasm`). Because the extension's content security policy covers the viewer page and its workers, the manifest allows `'wasm-unsafe-eval'`: WebAssembly only, not JavaScript `eval`. The engine pdf.js carries for running scripts inside PDFs is left out, and the viewer never sets up PDF scripting.
+
 ## Privacy
 
 Nothing is sent anywhere: no account, no telemetry, no network requests other than loading the PDF you opened. The

@@ -12,7 +12,17 @@ export async function openPdfjs(pdf: Pdf, opts: TextOptions = {}) {
     const { dirname } = await import('node:path');
     fontUrl = dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json')) + '/standard_fonts/';
   }
-  const task = pdfjs.getDocument({ data: new Uint8Array(pdf), isEvalSupported: false, useSystemFonts: false, standardFontDataUrl: fontUrl, verbosity: 0 });
+  // pdf.js 6 draws JPEG 2000 and JBIG2 images only through its WebAssembly decoders and says nothing when they are missing
+  // (the image stays blank), so name them: they sit next to the fonts.
+  let decoders: { wasmUrl?: string; iccUrl?: string } = {};
+  if (typeof process !== 'undefined' && process.versions?.node) {
+    const { createRequire } = await import('node:module');
+    const { dirname } = await import('node:path');
+    const { pathToFileURL } = await import('node:url');
+    const pkg = dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json'));
+    decoders = { wasmUrl: pathToFileURL(pkg + '/wasm/').href, iccUrl: pathToFileURL(pkg + '/iccs/').href };
+  }
+  const task = pdfjs.getDocument({ data: new Uint8Array(pdf), useSystemFonts: false, standardFontDataUrl: fontUrl, ...decoders, verbosity: 0 });
   try { return await task.promise; }
   catch (e) {
     if (e instanceof Error && e.name === 'PasswordException') throw new DocEditError('PDF needs a password', 'ENCRYPTED');
@@ -27,7 +37,7 @@ export async function extractText(pdf: Pdf, opts: TextOptions = {}): Promise<str
     const out: string[] = [];
     for (let i = 1; i <= doc.numPages; i++) out.push(pageString((await (await doc.getPage(i)).getTextContent()).items as TextItem[]).text);
     return out;
-  } finally { await doc.destroy(); }
+  } finally { await doc.loadingTask.destroy(); }
 }
 
 export interface TextMatch { page: number; text: string; /** one rect per text run the match touches */ rects: Rect[] }
@@ -58,7 +68,7 @@ export async function findText(pdf: Pdf, query: string | RegExp, opts: FindOptio
       }
     }
     return out;
-  } finally { await doc.destroy(); }
+  } finally { await doc.loadingTask.destroy(); }
 }
 
 interface TextItem { str: string; transform: number[]; width: number; height: number; hasEOL?: boolean }

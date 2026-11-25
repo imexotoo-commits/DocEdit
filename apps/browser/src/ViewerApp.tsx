@@ -101,7 +101,7 @@ export function ViewerApp() {
     if (!bytes) return;
     try {
       const doc = await loadSource(bytes, name, pw);
-      setLoaded((old) => { void old?.doc.destroy(); return doc; });
+      setLoaded((old) => { void old?.doc.loadingTask.destroy(); return doc; });
       setAskPassword(null); setPassword('');
       const info = await doc.doc.getMetadata().catch(() => null) as { info?: { Title?: string } } | null;
       document.title = info?.info?.Title?.trim() || name;
@@ -221,7 +221,7 @@ export function ViewerApp() {
         canvas.width = Math.ceil(vp.width); canvas.height = Math.ceil(vp.height);
         const ctx = canvas.getContext('2d', { alpha: false })!;
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
+        await page.render({ canvas: null, canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
         const blob = await new Promise<Blob>((ok, fail) => canvas.toBlob((b) => (b ? ok(b) : fail(new Error('Could not prepare the page'))), 'image/png'));
         const url = URL.createObjectURL(blob);
         urls.push(url);

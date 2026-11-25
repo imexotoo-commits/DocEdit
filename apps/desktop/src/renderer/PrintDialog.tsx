@@ -114,7 +114,7 @@ async function renderForPrint(item: PageItem, loaded: LoadedSource[]): Promise<P
     const viewport = page.getViewport({ scale, rotation: placement(item, loaded).rotation });
     // a cropped page: shift so only the visible window lands on the canvas
     const clip = clipFor(item, loaded, scale);
-    await page.render({ canvasContext: ctx, viewport, intent: 'print', transform: clip ? [1, 0, 0, 1, -clip.x, -clip.y] : undefined }).promise;
+    await page.render({ canvas: null, canvasContext: ctx, viewport, intent: 'print', transform: clip ? [1, 0, 0, 1, -clip.x, -clip.y] : undefined }).promise;
   }
   const blob = await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('Could not encode page image'))), 'image/png'));
   canvas.width = 0; canvas.height = 0;

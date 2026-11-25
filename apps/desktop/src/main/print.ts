@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { PrintRequest, PrintResult } from '../shared/api.js';
 
+/** Temporary folders of print jobs that are running: the file guard (see fileGuard.ts) lets their page and images load. */
+export const livePrintDirs = new Set<string>();
+
 /**
  * Prints page images through the system print dialog.
  * The renderer draws the chosen pages to PNG; here they go into a private temporary folder with a
@@ -13,6 +16,7 @@ import type { PrintRequest, PrintResult } from '../shared/api.js';
 export async function printPages(parent: BrowserWindow | null, req: PrintRequest): Promise<PrintResult> {
   if (!Array.isArray(req.pages) || req.pages.length === 0) return { ok: false, message: 'Nothing to print.' };
   const dir = await mkdtemp(join(tmpdir(), 'docedit-print-'));
+  livePrintDirs.add(dir);
   let win: BrowserWindow | null = null;
   try {
     const parts: string[] = [];
@@ -64,6 +68,7 @@ ${req.fit ? `.sheet img { max-width: 100vw; max-height: 100vh; object-fit: conta
     return { ok: false, message: err instanceof Error ? err.message : String(err) };
   } finally {
     if (win && !win.isDestroyed()) win.destroy();
+    livePrintDirs.delete(dir);
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }

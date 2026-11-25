@@ -19,9 +19,10 @@ for (const o of [out].flat()) for (const chunk of o.output ?? []) for (const id 
 
 // pdf.js needs its character maps and standard font data next to the page.
 const pdfjsDir = dirname(require.resolve('pdfjs-dist/package.json'));
-for (const d of ['cmaps', 'standard_fonts']) {
+for (const d of ['cmaps', 'standard_fonts', 'wasm', 'iccs']) {
   mkdirSync(join(root, 'dist/renderer/pdfjs'), { recursive: true });
-  cpSync(join(pdfjsDir, d), join(root, 'dist/renderer/pdfjs', d), { recursive: true });
+  // not the QuickJS engine pdf.js carries for running scripts inside PDFs: the app never runs them
+  cpSync(join(pdfjsDir, d), join(root, 'dist/renderer/pdfjs', d), { recursive: true, filter: (src) => !/quickjs/i.test(src) });
 }
 bundled.add(join(pdfjsDir, 'build', 'pdf.worker.min.mjs'));
 

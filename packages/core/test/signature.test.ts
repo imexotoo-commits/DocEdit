@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createCmsSigner, signPdf, verifySignatures } from '../src/index.js';
+import { createCmsSigner, listFormFields, signPdf, verifySignatures } from '../src/index.js';
 import { makePdf } from './helpers.js';
 
 pkijs.setEngine('test', new pkijs.CryptoEngine({ name: 'test', crypto: globalThis.crypto as Crypto }));
@@ -40,10 +40,10 @@ describe('certificate signatures', () => {
     const [r] = await verifySignatures(signed);
     expect(r).toMatchObject({ integrity: 'valid', signerName: 'Alex Signer', reason: 'I approve', location: 'Testville', changedAfterSigning: false, coversRevision: true, certificateValidAtSigning: true, trusted: null, timestamp: 'none' });
     expect(r!.certificate).toMatchObject({ subject: 'Alex Signer', selfSigned: true });
-    const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const d = await lib.getDocument({ data: signed.slice(), isEvalSupported: false }).promise;
-    const fields = await d.getFieldObjects() as Record<string, Array<{ type: string }>>;
-    expect(Object.values(fields).flat().some((f) => f.type === 'signature')).toBe(true);
+    // another reader sees the field: pdf-lib's own reading lists it as a signature. (pdf.js 6 leaves out signature fields it has
+    // nothing to draw, so it can no longer be the second reader here.)
+    const fields = await listFormFields(signed);
+    expect(fields.some((f) => f.kind === 'signature')).toBe(true);
   });
 
   it('detects any change to the signed bytes', async () => {

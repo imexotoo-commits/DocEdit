@@ -36,7 +36,7 @@ describe('the manifest each browser gets', () => {
   it('every browser keeps the strict content security policy, the viewer page and the icons', () => {
     for (const t of ['chromium', 'firefox', 'safari']) {
       const x = m(t);
-      expect(x.content_security_policy.extension_pages).toBe("script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'");
+      expect(x.content_security_policy.extension_pages).toBe("script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'none'; form-action 'none'"); // WebAssembly only: pdf.js's image decoders
       expect(x.web_accessible_resources[0].resources).toEqual(['viewer.html']);
       expect(x.icons['128']).toBe('icons/icon-128.png');
       expect(x.manifest_version).toBe(3);

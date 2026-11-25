@@ -21,6 +21,7 @@ const core = await import(new URL('../../../packages/core/dist/index.js', import
 const tmp = mkdtempSync(join(tmpdir(), 'oakq-probe-'));
 const profile = join(tmp, 'profile');
 const savePath = join(tmp, 'saved-by-dialog.pdf');
+const printedPath = join(tmp, 'printed.pdf');
 const saveDir = join(tmp, 'save-dir');
 const forged = join(tmpdir(), `oakq-probe-forged-${process.pid}.pdf`);
 const PORT = 9300 + Math.floor(Math.random() * 500);
@@ -41,7 +42,7 @@ const smallPdfB64 = Buffer.from(await core.createBlankPdf(1, [200, 200])).toStri
 let stderr = '';
 const app = spawn(electronBin, ['.', hostile, `--remote-debugging-port=${PORT}`], {
   cwd: desktop, stdio: ['ignore', 'ignore', 'pipe'],
-  env: { ...process.env, DOCEDIT_TEST_USER_DATA: profile, DOCEDIT_TEST_SAVE_PATH: savePath, DOCEDIT_TEST_SAVE_DIR: saveDir },
+  env: { ...process.env, DOCEDIT_TEST_USER_DATA: profile, DOCEDIT_TEST_SAVE_PATH: savePath, DOCEDIT_TEST_SAVE_DIR: saveDir, DOCEDIT_TEST_PRINT_TO_PDF: printedPath },
 });
 app.stderr.on('data', (d) => { stderr += d; });
 let exited = false;
@@ -142,6 +143,12 @@ check('settings reject a folder, unknown theme and values of the wrong type', sv
 // ---- 7. hostile PDF content is shown as text, never run ----
 const dom = await inPage(`await new Promise(r => setTimeout(r, 500)); return { xss: window.__xss ?? null, imgs: document.querySelectorAll('img[src="x"], img[onerror], script:not([src])').length, opened: document.body.innerText.length > 0 }`);
 check('HTML in the document title, outline and notes is not interpreted', dom.value && dom.value.xss === null && dom.value.imgs === 0, JSON.stringify(dom.value));
+
+// ---- 7b. the protections must not break what the app needs: printing loads a temporary page from outside the app folder ----
+const png1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+const printed = await inPage(`const png = Uint8Array.from(atob('${png1x1}'), c => c.charCodeAt(0)); return await window.docedit.printPages({ title: 'probe', pages: [{ png, widthPt: 200, heightPt: 200 }], fit: true, orientation: 'auto' })`, 20000);
+const printedBytes = existsSync(printedPath) ? readFileSync(printedPath) : Buffer.alloc(0);
+check('printing still works (the print page and its image are allowed through the file guard)', printed.value?.ok === true && printedBytes.length > 800 && printedBytes.subarray(0, 5).toString() === '%PDF-' && printedBytes.includes('/Subtype /Image'), JSON.stringify(printed).slice(0, 100) + ` pdf=${printedBytes.length}B image=${printedBytes.includes('/Subtype /Image')}`);
 
 // ---- 8. malformed calls must not crash or hang the main process ----
 const garbage = ['undefined', 'null', "'x'", '42', '{}', '[]', '({ bytes: new Uint8Array(4) })', "({ files: [], kind: 'png' })", "[{ name: '../../x', bytes: new Uint8Array(2) }]", "new Uint8Array(0)"];

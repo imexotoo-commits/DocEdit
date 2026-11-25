@@ -18,12 +18,12 @@ export class NodeRasterizer implements Rasterizer {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
-    await page.render({ canvasContext: ctx as never, viewport }).promise;
+    await page.render({ canvas: null, canvasContext: ctx as never, viewport }).promise;
     const img = ctx.getImageData(0, 0, width, height);
     return { width, height, data: new Uint8ClampedArray(img.data.buffer, img.data.byteOffset, img.data.length), transform: viewport.transform as RasterPage['transform'], scale };
   }
 
   async close(): Promise<void> {
-    if (this.cache) { await this.cache.doc.destroy(); this.cache = undefined; }
+    if (this.cache) { await this.cache.doc.loadingTask.destroy(); this.cache = undefined; }
   }
 }

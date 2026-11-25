@@ -4,7 +4,7 @@ import { deepText, makePdf } from './helpers.js';
 
 async function pdfjsOpen(bytes: Uint8Array, password?: string) {
   const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  return lib.getDocument({ data: bytes.slice(), isEvalSupported: false, ...(password !== undefined ? { password } : {}) }).promise;
+  return lib.getDocument({ data: bytes.slice(), ...(password !== undefined ? { password } : {}) }).promise;
 }
 
 describe('password protection', () => {
