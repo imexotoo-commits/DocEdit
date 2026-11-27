@@ -10,7 +10,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const desktop = join(here, '..');
@@ -22,6 +22,13 @@ const tmp = mkdtempSync(join(tmpdir(), 'oakq-probe-'));
 const profile = join(tmp, 'profile');
 const savePath = join(tmp, 'saved-by-dialog.pdf');
 const printedPath = join(tmp, 'printed.pdf');
+// the bait: a real file outside the app. A probe that reads or opens it has got through; one that cannot has been stopped by a
+// protection and not just by the file being missing (a fixed path such as /etc/hosts does not exist on every system).
+const CANARY = 'oakqueill-probe-canary-' + process.pid;
+const canaryPath = join(tmp, 'private notes.txt');
+writeFileSync(canaryPath, CANARY);
+const canaryUrl = pathToFileURL(canaryPath).href;
+const canaryJs = JSON.stringify(canaryPath);
 const saveDir = join(tmp, 'save-dir');
 const forged = join(tmpdir(), `oakq-probe-forged-${process.pid}.pdf`);
 const PORT = 9300 + Math.floor(Math.random() * 500);
@@ -91,12 +98,12 @@ const inj = await inPage(`window.__x = 0; const s = document.createElement('scri
 check('an injected inline script does not run', inj.value === 0, JSON.stringify(inj));
 const remote = await inPage(`let v = null; document.addEventListener('securitypolicyviolation', e => { v = e.violatedDirective; }); try { await fetch('http://127.0.0.1:9/'); return { fetched: true, v }; } catch (e) { await new Promise(r => setTimeout(r, 100)); return { fetched: false, v }; }`);
 check('a request to another origin is blocked by the policy (connect-src)', remote.value?.fetched === false && !!remote.value?.v, JSON.stringify(remote.value));
-const fileFetch = await inPage(`try { const r = await fetch('file:///etc/hosts'); return { read: true, text: (await r.text()).slice(0, 20) }; } catch (e) { return { read: false }; }`);
+const fileFetch = await inPage(`try { const r = await fetch('${canaryUrl}'); return { read: true, text: (await r.text()).slice(0, 40) }; } catch (e) { return { read: false }; }`);
 check('the page cannot read local files with fetch(file://)', fileFetch.value?.read === false, JSON.stringify(fileFetch.value));
-const xhr = await inPage(`return await new Promise(r => { const x = new XMLHttpRequest(); x.onload = () => r({ read: true, text: x.responseText.slice(0, 20) }); x.onerror = () => r({ read: false }); try { x.open('GET', 'file:///etc/hosts'); x.send(); } catch (e) { r({ read: false }); } })`);
+const xhr = await inPage(`return await new Promise(r => { const x = new XMLHttpRequest(); x.onload = () => r({ read: true, text: x.responseText.slice(0, 20) }); x.onerror = () => r({ read: false }); try { x.open('GET', '${canaryUrl}'); x.send(); } catch (e) { r({ read: false }); } })`);
 check('the page cannot read local files with XMLHttpRequest', xhr.value?.read === false, JSON.stringify(xhr.value));
-const frame = await inPage(`const f = document.createElement('iframe'); f.src = 'file:///etc/hosts'; document.body.append(f); await new Promise(r => setTimeout(r, 600)); let text = ''; try { text = f.contentDocument?.body?.innerText ?? ''; } catch {} f.remove(); return text.length`);
-check('a file:// iframe cannot be read by the page', frame.value === 0 || frame.value === undefined, JSON.stringify(frame));
+const frame = await inPage(`const f = document.createElement('iframe'); f.src = '${canaryUrl}'; document.body.append(f); await new Promise(r => setTimeout(r, 600)); let text = ''; try { text = f.contentDocument?.body?.innerText ?? ''; } catch {} f.remove(); return text.includes('${CANARY}')`);
+check('a file:// iframe cannot be read by the page', frame.value !== true, JSON.stringify(frame));
 
 // ---- 3. navigation and new windows ----
 const before = (await targets()).length;
@@ -115,14 +122,14 @@ check('notifications, microphone and location are denied', perm.value?.n !== 'gr
 
 // ---- 5. forged paths are refused (the main process decides, not the page) ----
 const cases = [
-  ['openWritten with a path never written', `window.docedit.openWritten('/etc/hosts')`],
-  ['readTextFile of a file never chosen', `window.docedit.readTextFile('/etc/hosts')`],
-  ['readImage of a file never chosen', `window.docedit.readImage('/etc/hosts')`],
-  ['convertOffice of a file never chosen', `window.docedit.convertOffice('/etc/hosts')`],
-  ['certSign with a key file never chosen', `window.docedit.certSign({ pdf: new Uint8Array([1]), p12Path: '/etc/hosts', password: 'x', page: 0 })`],
-  ['recentOpen with a path that is not on the recent list', `window.docedit.recentOpen('/etc/hosts')`],
+  ['openWritten with a path never written', `window.docedit.openWritten(${canaryJs})`],
+  ['readTextFile of a file never chosen', `window.docedit.readTextFile(${canaryJs})`],
+  ['readImage of a file never chosen', `window.docedit.readImage(${canaryJs})`],
+  ['convertOffice of a file never chosen', `window.docedit.convertOffice(${canaryJs})`],
+  ['certSign with a key file never chosen', `window.docedit.certSign({ pdf: new Uint8Array([1]), p12Path: ${canaryJs}, password: 'x', page: 0 })`],
+  ['recentOpen with a path that is not on the recent list', `window.docedit.recentOpen(${canaryJs})`],
   ['recentOpen with a ../ path', `window.docedit.recentOpen('../../../../etc/hosts')`],
-  ['openDropped with a path string instead of a File', `window.docedit.openDropped('/etc/hosts')`],
+  ['openDropped with a path string instead of a File', `window.docedit.openDropped(${canaryJs})`],
   ['openDropped with a File that has no path', `window.docedit.openDropped(new File(['%PDF-1.4'], 'x.pdf'))`],
   ['recoveryLoad with ../ in the id', `window.docedit.recoveryLoad('../../../etc')`],
   ['recoveryClear with ../ in the id', `window.docedit.recoveryClear('../../x')`],
